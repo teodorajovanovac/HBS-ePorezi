@@ -65,6 +65,18 @@ public class ZaglavljeObracunaScreen {
             populateFields();
         }
         loadPoslodavci();
+        // Zaštita od gubitka izmena pri sidebar navigaciji
+        root.setUserData((AppLayout.DirtyCheckable) this::confirmLeave);
+    }
+
+    private boolean confirmLeave() {
+        if (!hasUnsavedChanges) return true;
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Nesačuvane izmene");
+        confirm.setHeaderText("Imate nesačuvane izmene.");
+        confirm.setContentText("Da li ste sigurni da želite da napustite ekran bez čuvanja?");
+        Optional<ButtonType> result = confirm.showAndWait();
+        return result.isPresent() && result.get() == ButtonType.OK;
     }
 
     public void setOnSaveCallback(Consumer<ObracunDefinicija> callback) {
@@ -211,17 +223,19 @@ public class ZaglavljeObracunaScreen {
                 createFieldRow("Tip isplate: *", tipIsplateCombo),
                 createFieldRow("Mesec: *", mesecField),
                 createFieldRow("Datum obračuna: *", datumObracunaPicker),
-                createFieldRow("Datum slanja:", datumSlanjaPicker),
+                createFieldRow("Datum slanja: *", datumSlanjaPicker),
                 createFieldRow("Oznaka:", oznakaKonacnaCombo),
                 new Separator(),
                 createFieldRow("Broj dana:", brojDanaField),
                 createFieldRow("Fond sati:", brojSatiField),
                 createFieldRow("Broj prijave UID:", brojPrijaveField),
                 new Separator(),
-                createFieldRow("Poslodavac: *", poslodavacCombo),
-                new Separator(),
-                infoLabel
+                createFieldRow("Poslodavac: *", poslodavacCombo)
         );
+        // XML napomena samo u edit modu
+        if (!createMode) {
+            form.getChildren().addAll(new Separator(), infoLabel);
+        }
 
         // Dirty tracking
         nazivField.textProperty().addListener((obs, o, n) -> markDirty());
@@ -439,9 +453,14 @@ public class ZaglavljeObracunaScreen {
         }
         if (mesecField.getText().isEmpty()) {
             errors.append("- Mesec je obavezan\n");
+        } else if (!mesecField.getText().matches("\\d{4}-(0[1-9]|1[0-2])")) {
+            errors.append("- Mesec mora biti u formatu YYYY-MM (npr. 2025-11)\n");
         }
         if (datumObracunaPicker.getValue() == null) {
             errors.append("- Datum obračuna je obavezan\n");
+        }
+        if (datumSlanjaPicker.getValue() == null) {
+            errors.append("- Datum slanja je obavezan\n");
         }
         if (poslodavacCombo.getValue() == null) {
             errors.append("- Poslodavac je obavezan\n");
@@ -594,7 +613,7 @@ public class ZaglavljeObracunaScreen {
                 return;
             }
         }
-        HbsZaradeApp.navigateTo(new WelcomeDashboard().getRoot());
+        AppLayout.setContent(new ObracuniScreen().getRoot());
     }
 
     private void showError(String title, String message) {

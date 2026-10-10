@@ -53,10 +53,12 @@ public class DatabaseConnection {
      * Kreira konekciju ka common bazi (aj_fn_cmn.mdb).
      *
      * @return JDBC Connection
-     * @throws SQLException ako konekcija ne moze da se uspostavi
+     * @throws SQLException ako konekcija ne moze da se uspostavi ili baza nije konfigurisana
      */
     public Connection getCommonConnection() throws SQLException {
-        return createConnection(config.getCommonJdbcUrl());
+        String url = config.getCommonJdbcUrl();
+        if (url == null) throw new SQLException("Common baza nije konfigurisana (db.common.path nije postavljen u app.local.properties).");
+        return createConnection(url);
     }
 
     /**
@@ -73,10 +75,12 @@ public class DatabaseConnection {
      * Kreira konekciju ka bazi obracuna (obracun-honorara.mdb).
      *
      * @return JDBC Connection
-     * @throws SQLException ako konekcija ne moze da se uspostavi
+     * @throws SQLException ako konekcija ne moze da se uspostavi ili baza nije konfigurisana
      */
     public Connection getCalcConnection() throws SQLException {
-        return createConnection(config.getCalcJdbcUrl());
+        String url = config.getCalcJdbcUrl();
+        if (url == null) throw new SQLException("Calc baza nije konfigurisana (db.calc.path nije postavljen u app.local.properties).");
+        return createConnection(url);
     }
 
     private Connection createConnection(String jdbcUrl) throws SQLException {

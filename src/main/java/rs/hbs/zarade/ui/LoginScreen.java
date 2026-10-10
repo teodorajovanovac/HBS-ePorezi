@@ -17,6 +17,7 @@ import java.sql.Connection;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.prefs.Preferences;
 
 /**
  * Login ekran - Screen 1 iz UI specifikacije.
@@ -206,7 +207,13 @@ public class LoginScreen {
                     userCombo.getItems().add(s.getUser());
                 }
                 if (!userCombo.getItems().isEmpty()) {
-                    userCombo.setValue(userCombo.getItems().get(0));
+                    String lastUser = Preferences.userNodeForPackage(LoginScreen.class)
+                            .get("last.user", null);
+                    if (lastUser != null && userCombo.getItems().contains(lastUser)) {
+                        userCombo.setValue(lastUser);
+                    } else {
+                        userCombo.setValue(userCombo.getItems().get(0));
+                    }
                 }
             }
         } catch (Exception e) {
@@ -236,6 +243,7 @@ public class LoginScreen {
                 Staff staff = dao.authenticate(conn, username, password);
                 if (staff != null) {
                     hideError();
+                    Preferences.userNodeForPackage(LoginScreen.class).put("last.user", username);
                     HbsZaradeApp.setCurrentUser(staff.getUser(), staff.getLevel() != null ? staff.getLevel() : 0);
                     // Log prijavu
                     LogDao.log(conn, staff.getIdUser(), staff.getUser(),

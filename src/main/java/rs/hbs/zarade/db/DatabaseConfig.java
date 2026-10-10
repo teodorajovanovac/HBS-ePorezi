@@ -83,14 +83,14 @@ public class DatabaseConfig {
             throw new DatabaseConfigException("Greska pri citanju konfiguracionog fajla: " + e.getMessage(), e);
         }
 
-        String commonPath = getRequiredProperty(props, KEY_DB_COMMON);
         String mainPath = getRequiredProperty(props, KEY_DB_MAIN);
-        String calcPath = getRequiredProperty(props, KEY_DB_CALC);
-
-        // Validacija da fajlovi postoje
-        validateDatabaseFile(commonPath, KEY_DB_COMMON);
         validateDatabaseFile(mainPath, KEY_DB_MAIN);
-        validateDatabaseFile(calcPath, KEY_DB_CALC);
+
+        // common i calc su opcioni — ne moraju biti konfigurisani
+        String commonPath = props.getProperty(KEY_DB_COMMON, "").trim();
+        String calcPath = props.getProperty(KEY_DB_CALC, "").trim();
+        if (!commonPath.isEmpty()) validateDatabaseFile(commonPath, KEY_DB_COMMON);
+        if (!calcPath.isEmpty()) validateDatabaseFile(calcPath, KEY_DB_CALC);
 
         return new DatabaseConfig(commonPath, mainPath, calcPath);
     }
@@ -186,9 +186,10 @@ public class DatabaseConfig {
     }
 
     /**
-     * @return JDBC URL za common bazu
+     * @return JDBC URL za common bazu, ili null ako nije konfigurisana
      */
     public String getCommonJdbcUrl() {
+        if (commonDbPath == null || commonDbPath.isEmpty()) return null;
         return buildJdbcUrl(commonDbPath);
     }
 
@@ -200,9 +201,10 @@ public class DatabaseConfig {
     }
 
     /**
-     * @return JDBC URL za bazu obracuna
+     * @return JDBC URL za bazu obracuna, ili null ako nije konfigurisana
      */
     public String getCalcJdbcUrl() {
+        if (calcDbPath == null || calcDbPath.isEmpty()) return null;
         return buildJdbcUrl(calcDbPath);
     }
 

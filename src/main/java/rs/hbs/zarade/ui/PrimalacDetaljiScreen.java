@@ -1,5 +1,6 @@
 package rs.hbs.zarade.ui;
 
+import javafx.animation.PauseTransition;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -8,20 +9,23 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.FileChooser;
+import javafx.util.Duration;
 import rs.hbs.zarade.HbsZaradeApp;
+import rs.hbs.zarade.db.AppSettingsDao;
 import rs.hbs.zarade.db.DatabaseConnection;
 import rs.hbs.zarade.db.ObracunDao;
 import rs.hbs.zarade.db.ObracunDefinicijaDao;
 import rs.hbs.zarade.db.OpstinaDao;
+import rs.hbs.zarade.db.PoslodavacDao;
 import rs.hbs.zarade.db.PrimalacDao;
 import rs.hbs.zarade.db.VrstaPrimaocaDao;
 import rs.hbs.zarade.domain.Obracun;
 import rs.hbs.zarade.domain.ObracunDefinicija;
 import rs.hbs.zarade.domain.Opstina;
+import rs.hbs.zarade.domain.Poslodavac;
 import rs.hbs.zarade.domain.Primalac;
 import rs.hbs.zarade.domain.VrstaPrimaoca;
 import rs.hbs.zarade.reporting.PdfReporter;
-import rs.hbs.zarade.reporting.XmlExporter;
 import rs.hbs.zarade.validation.IdentifikatorValidator;
 
 import javafx.application.Platform;
@@ -48,6 +52,8 @@ public class PrimalacDetaljiScreen {
     private HBox header;
     private Button saveBtn;
     private Button cancelBtn;
+    private Button pppPoBtn;
+    private Button stampaBtn;
 
     private Primalac primalac;
     private boolean isNew;
@@ -92,6 +98,9 @@ public class PrimalacDetaljiScreen {
                 vrstePrimaoca = vpDao.findAll(conn);
                 OpstinaDao oDao = new OpstinaDao();
                 opstine = oDao.findAll(conn);
+                // Sortiraj abecedno po nazivu
+                opstine.sort(java.util.Comparator.comparing(
+                        o -> o.getNaziv() != null ? o.getNaziv() : ""));
             }
         } catch (Exception e) {
             System.err.println("Greska pri ucitavanju sifarnika: " + e.getMessage());
@@ -107,6 +116,19 @@ public class PrimalacDetaljiScreen {
         root.setCenter(content);
         HBox footer = createFooter();
         root.setBottom(footer);
+
+        // Registruj DirtyCheckable zaštitu za sidebar navigaciju
+        root.setUserData((AppLayout.DirtyCheckable) this::confirmLeave);
+    }
+
+    private boolean confirmLeave() {
+        if (!hasUnsavedChanges) return true;
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Nesačuvane izmene");
+        confirm.setHeaderText("Imate nesačuvane izmene.");
+        confirm.setContentText("Da li ste sigurni da želite da napustite ekran bez čuvanja?");
+        Optional<ButtonType> result = confirm.showAndWait();
+        return result.isPresent() && result.get() == ButtonType.OK;
     }
 
     private HBox createHeader() {
@@ -228,6 +250,30 @@ public class PrimalacDetaljiScreen {
                 scrollComboToSelected(sifraOpstineCombo)));
         nazivOpstineCombo.setOnShowing(e -> Platform.runLater(() ->
                 scrollComboToSelected(nazivOpstineCombo)));
+
+        // Type-ahead za naziv opštine (kucanjem skače na prvu stavku koja počinje sa unetim tekstom)
+        StringBuilder typeBuffer = new StringBuilder();
+        PauseTransition resetType = new PauseTransition(Duration.seconds(1.5));
+        resetType.setOnFinished(e -> typeBuffer.setLength(0));
+        nazivOpstineCombo.setOnKeyTyped(event -> {
+            String ch = event.getCharacter();
+            if (ch == null || ch.isEmpty() || ch.charAt(0) < 32) return;
+            typeBuffer.append(ch.toLowerCase());
+            resetType.playFromStart();
+            String typed = typeBuffer.toString();
+            for (Opstina o : nazivOpstineCombo.getItems()) {
+                if (o.getNaziv() != null && o.getNaziv().toLowerCase().startsWith(typed)) {
+                    loading = true;
+                    nazivOpstineCombo.setValue(o);
+                    sifraOpstineCombo.setValue(o);
+                    loading = false;
+                    if (nazivOpstineCombo.isShowing()) {
+                        Platform.runLater(() -> scrollComboToSelected(nazivOpstineCombo));
+                    }
+                    break;
+                }
+            }
+        });
 
         VBox mbBox = new VBox(4);
         Label mbLabel = new Label("MB/JMBG: *");
@@ -374,13 +420,13 @@ public class PrimalacDetaljiScreen {
         });
         cancelBtn.setDisable(true);
 
-        Button pppPoBtn = new Button("PPP-PO");
+        pppPoBtn = new Button("PPP-PO");
         pppPoBtn.setStyle("-fx-background-color: #9A6700; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 7 14; -fx-background-radius: 6; -fx-cursor: hand;");
         pppPoBtn.setOnMouseEntered(e -> pppPoBtn.setStyle("-fx-background-color: #7A5200; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 7 14; -fx-background-radius: 6; -fx-cursor: hand;"));
         pppPoBtn.setOnMouseExited(e -> pppPoBtn.setStyle("-fx-background-color: #9A6700; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 7 14; -fx-background-radius: 6; -fx-cursor: hand;"));
         pppPoBtn.setOnAction(e -> doPppPo());
 
-        Button stampaBtn = new Button("Štampa");
+        stampaBtn = new Button("Štampa");
         stampaBtn.setStyle("-fx-background-color: #0969DA; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 7 14; -fx-background-radius: 6; -fx-cursor: hand;");
         stampaBtn.setOnMouseEntered(e -> stampaBtn.setStyle("-fx-background-color: #0550AE; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 7 14; -fx-background-radius: 6; -fx-cursor: hand;"));
         stampaBtn.setOnMouseExited(e -> stampaBtn.setStyle("-fx-background-color: #0969DA; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 7 14; -fx-background-radius: 6; -fx-cursor: hand;"));
@@ -468,6 +514,7 @@ public class PrimalacDetaljiScreen {
         hasUnsavedChanges = false;
         if (saveBtn != null) saveBtn.setDisable(!isNew);
         if (cancelBtn != null) cancelBtn.setDisable(true);
+        if (stampaBtn != null) stampaBtn.setDisable(false);
         setHeaderColor(isNew ? COLOR_NEW : COLOR_VIEW);
     }
 
@@ -571,55 +618,88 @@ public class PrimalacDetaljiScreen {
     private void doPppPo() {
         if (!checkUnsavedBeforeReport()) return;
         if (isNew || primalac.getIdZaposleni() == null) {
-            showInfo("PPP-PO", "Primalac mora biti sačuvan pre generisanja PPP-PO XML-a.");
+            showInfo("PPP-PO", "Primalac mora biti sačuvan pre generisanja PPP-PO potvrde.");
             return;
         }
+
+        // Pitaj za godinu
+        TextInputDialog yearDialog = new TextInputDialog(
+                String.valueOf(java.time.LocalDate.now().getYear() - 1));
+        yearDialog.setTitle("PPP-PO Potvrda");
+        yearDialog.setHeaderText("Za koju godinu se generiše PPP-PO potvrda?");
+        yearDialog.setContentText("Godina:");
+        Optional<String> yearResult = yearDialog.showAndWait();
+        if (yearResult.isEmpty()) return;
+
+        int godina;
+        try {
+            godina = Integer.parseInt(yearResult.get().trim());
+            if (godina < 2000 || godina > 2100) throw new NumberFormatException();
+        } catch (NumberFormatException e) {
+            showError("Neispravna godina", "Unesite validnu godinu (npr. 2024).");
+            return;
+        }
+
         try {
             DatabaseConnection dbConn = DatabaseConnection.getInstance();
             if (dbConn == null) {
                 showError("Baza podataka nije dostupna.", "");
                 return;
             }
-            List<Obracun> stavke;
+
+            List<Obracun> sveStavke;
             List<ObracunDefinicija> definicije;
+            Poslodavac poslodavac = null;
+
             try (Connection conn = dbConn.getMainConnection()) {
-                ObracunDao obracunDao = new ObracunDao();
-                stavke = obracunDao.findByLnkZap(conn, primalac.getIdZaposleni());
-                ObracunDefinicijaDao defDao = new ObracunDefinicijaDao();
-                definicije = defDao.findAll(conn);
+                sveStavke = new ObracunDao().findByLnkZap(conn, primalac.getIdZaposleni());
+                definicije = new ObracunDefinicijaDao().findAll(conn);
+                List<Poslodavac> poslodavci = new PoslodavacDao().findAll(conn);
+                if (!poslodavci.isEmpty()) poslodavac = poslodavci.get(0);
             }
-            if (stavke.isEmpty()) {
-                showInfo("PPP-PO", "Nema obračuna za ovog primaoca.");
+
+            // Mapa definicija po ID-u za brzo pretraživanje
+            java.util.Map<Integer, ObracunDefinicija> defMap = new java.util.HashMap<>();
+            for (ObracunDefinicija d : definicije) {
+                if (d.getIdObracun() != null) defMap.put(d.getIdObracun(), d);
+            }
+
+            // Filtriranje stavki za izabranu godinu
+            String godinaStr = String.valueOf(godina);
+            List<Obracun> stavkeZaGodinu = new ArrayList<>();
+            for (Obracun o : sveStavke) {
+                if (o.getLnkObracun() == null) continue;
+                ObracunDefinicija def = defMap.get(o.getLnkObracun());
+                if (def == null) continue;
+                String mesec = def.getMesec();
+                boolean uGodini = (mesec != null && mesec.startsWith(godinaStr))
+                        || (mesec == null && def.getDatumObracuna() != null
+                            && def.getDatumObracuna().getYear() == godina);
+                if (uGodini) stavkeZaGodinu.add(o);
+            }
+
+            if (stavkeZaGodinu.isEmpty()) {
+                showInfo("PPP-PO", "Nema obračuna za godinu " + godina + " za ovog primaoca.");
                 return;
             }
-            // Nađi prvu definiciju (najnoviju) za ovog primaoca
-            ObracunDefinicija definicija = null;
-            if (!stavke.isEmpty() && stavke.get(0).getLnkObracun() != null) {
-                int lnkObracun = stavke.get(0).getLnkObracun();
-                for (ObracunDefinicija d : definicije) {
-                    if (d.getIdObracun() != null && d.getIdObracun() == lnkObracun) {
-                        definicija = d;
+
+            // Lookup naziva opštine primaoca
+            String opstinaNaziv = "";
+            if (primalac.getOznakaPrebivalista() != null) {
+                for (Opstina o : opstine) {
+                    if (primalac.getOznakaPrebivalista().equals(o.getSifra())) {
+                        opstinaNaziv = o.getNaziv();
                         break;
                     }
                 }
             }
-            if (definicija == null && !definicije.isEmpty()) {
-                definicija = definicije.get(0);
-            }
-            if (definicija == null) {
-                definicija = new ObracunDefinicija();
-            }
 
-            FileChooser chooser = new FileChooser();
-            chooser.setTitle("Snimi PPP-PO XML");
-            chooser.setInitialFileName("PPP-PO_" + primalac.getPrezime() + "_" + primalac.getIme() + ".xml");
-            chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("XML fajlovi", "*.xml"));
-            File file = chooser.showSaveDialog(HbsZaradeApp.getPrimaryStage());
-            if (file == null) return;
-
-            final ObracunDefinicija finalDef = definicija;
-            XmlExporter.exportToFile(file, finalDef, stavke, null);
-            showInfo("PPP-PO", "XML je uspešno sačuvan:\n" + file.getAbsolutePath());
+            File tempFile = File.createTempFile("PPP-PO_", ".pdf");
+            tempFile.deleteOnExit();
+            PdfReporter.generatePppPoPotvrda(tempFile, primalac, opstinaNaziv, poslodavac, stavkeZaGodinu, godina);
+            showDocPreview(tempFile,
+                    "PPP-PO_" + primalac.getPrezime() + "_" + primalac.getIme() + "_" + godina + ".pdf",
+                    AppSettingsDao.KEY_PRIMALAC_PDF_PATH);
         } catch (Exception e) {
             showError("Greška pri generisanju PPP-PO", e.getMessage());
         }
@@ -631,18 +711,56 @@ public class PrimalacDetaljiScreen {
             showInfo("Štampa", "Primalac mora biti sačuvan pre štampe.");
             return;
         }
-        FileChooser chooser = new FileChooser();
-        chooser.setTitle("Snimi PDF kartona primaoca");
-        chooser.setInitialFileName("Primalac_" + primalac.getPrezime() + "_" + primalac.getIme() + ".pdf");
-        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PDF fajlovi", "*.pdf"));
-        File file = chooser.showSaveDialog(HbsZaradeApp.getPrimaryStage());
-        if (file == null) return;
         try {
-            PdfReporter.generatePrimalacKarton(file, primalac);
-            showInfo("Štampa", "PDF je uspešno sačuvan:\n" + file.getAbsolutePath());
+            File tempFile = File.createTempFile("Primalac_", ".pdf");
+            tempFile.deleteOnExit();
+            PdfReporter.generatePrimalacKarton(tempFile, primalac);
+            showDocPreview(tempFile,
+                    "Primalac_" + primalac.getPrezime() + "_" + primalac.getIme() + ".pdf",
+                    AppSettingsDao.KEY_PRIMALAC_PDF_PATH);
         } catch (Exception e) {
             showError("Greška pri generisanju PDF-a", e.getMessage());
         }
+    }
+
+    /**
+     * Prikazuje pregled dokumenta sa opcijama: Otvori pregled, Štampaj, Sačuvaj PDF.
+     */
+    private void showDocPreview(File tempPdf, String defaultFileName, String settingsKey) {
+        ButtonType previewType = new ButtonType("Otvori pregled");
+        ButtonType printType   = new ButtonType("Štampaj");
+        ButtonType saveType    = new ButtonType("Sačuvaj PDF...");
+        ButtonType cancelType  = new ButtonType("Otkaži", ButtonBar.ButtonData.CANCEL_CLOSE);
+
+        Alert dialog = new Alert(Alert.AlertType.NONE);
+        dialog.setTitle("Pregled dokumenta");
+        dialog.setHeaderText("Dokument je spreman — izaberite akciju");
+        dialog.getButtonTypes().setAll(previewType, printType, saveType, cancelType);
+
+        dialog.showAndWait().ifPresent(btn -> {
+            try {
+                if (btn == previewType) {
+                    java.awt.Desktop.getDesktop().open(tempPdf);
+                } else if (btn == printType) {
+                    java.awt.Desktop.getDesktop().print(tempPdf);
+                } else if (btn == saveType) {
+                    FileChooser fc = new FileChooser();
+                    fc.setTitle("Sačuvaj PDF");
+                    File dir = AppSettingsDao.getExportDir(settingsKey);
+                    if (dir != null) fc.setInitialDirectory(dir);
+                    fc.setInitialFileName(defaultFileName);
+                    fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("PDF fajlovi", "*.pdf"));
+                    File dest = fc.showSaveDialog(HbsZaradeApp.getPrimaryStage());
+                    if (dest != null) {
+                        java.nio.file.Files.copy(tempPdf.toPath(), dest.toPath(),
+                                java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                        showPdfSaved("Sačuvano", "PDF je uspešno sačuvan.", dest);
+                    }
+                }
+            } catch (Exception e) {
+                showError("Greška", e.getMessage());
+            }
+        });
     }
 
     private void markDirty() {
@@ -652,6 +770,8 @@ public class PrimalacDetaljiScreen {
             setHeaderColor(COLOR_DIRTY);
             if (saveBtn != null) saveBtn.setDisable(false);
             if (cancelBtn != null) cancelBtn.setDisable(false);
+            if (stampaBtn != null) stampaBtn.setDisable(true);
+        if (pppPoBtn != null) pppPoBtn.setDisable(true);
         }
     }
 
@@ -660,6 +780,8 @@ public class PrimalacDetaljiScreen {
         setHeaderColor(COLOR_SAVED);
         if (saveBtn != null) saveBtn.setDisable(true);
         if (cancelBtn != null) cancelBtn.setDisable(true);
+        if (stampaBtn != null) stampaBtn.setDisable(false);
+        if (pppPoBtn != null) pppPoBtn.setDisable(false);
     }
 
     private void validateMb(String value) {
@@ -694,6 +816,23 @@ public class PrimalacDetaljiScreen {
         HBox.setHgrow(field, Priority.ALWAYS);
         row.getChildren().addAll(label, field);
         return row;
+    }
+
+    /** Prikazuje poruku o sačuvanom PDF-u sa OK i "Otvori" dugmetom. */
+    private void showPdfSaved(String title, String message, java.io.File file) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle(title);
+        alert.setHeaderText(title);
+        alert.setContentText(message);
+        ButtonType otvoriBtn = new ButtonType("Otvori PDF");
+        alert.getButtonTypes().setAll(otvoriBtn, ButtonType.OK);
+        alert.showAndWait().ifPresent(btn -> {
+            if (btn == otvoriBtn) {
+                try { java.awt.Desktop.getDesktop().open(file); } catch (Exception ex) {
+                    showError("Greška", "Ne mogu otvoriti fajl: " + ex.getMessage());
+                }
+            }
+        });
     }
 
     private void showError(String title, String message) {

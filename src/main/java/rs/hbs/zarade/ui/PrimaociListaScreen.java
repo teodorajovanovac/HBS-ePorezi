@@ -18,6 +18,8 @@ import rs.hbs.zarade.db.PrimalacDao;
 import rs.hbs.zarade.domain.Opstina;
 import rs.hbs.zarade.domain.Primalac;
 
+import javafx.application.Platform;
+
 import java.sql.Connection;
 import java.util.HashMap;
 import java.util.List;
@@ -28,12 +30,15 @@ import java.util.Map;
  */
 public class PrimaociListaScreen {
 
+    // Stanje koje se čuva između navigacija
+    private static String savedFilter = "";
+    private static Integer savedSelectedId = null;
+
     private BorderPane root;
     private TableView<Primalac> tableView;
     private ObservableList<Primalac> primaociData;
     private FilteredList<Primalac> filteredData;
     private TextField filterField;
-    private Label countLabel;
     private Map<String, String> opstineMap = new HashMap<>(); // sifra → naziv
 
     public PrimaociListaScreen() {
@@ -87,14 +92,16 @@ public class PrimaociListaScreen {
                     if (primalac.getEmail() != null && primalac.getEmail().toLowerCase().contains(f)) return true;
                     return false;
                 });
-                updateCount();
             }
         });
 
-        countLabel = new Label("0 zapisa");
-        countLabel.setStyle("-fx-background-color: #EEF2F7; -fx-padding: 5 12; -fx-background-radius: 4; -fx-text-fill: #57606A; -fx-font-size: 12px;");
+        Button clearHeaderBtn = new Button("Ukloni filter");
+        clearHeaderBtn.setStyle("-fx-background-color: #EEF2F7; -fx-text-fill: #57606A; -fx-font-size: 12px; -fx-padding: 5 12; -fx-background-radius: 4; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 4; -fx-cursor: hand;");
+        clearHeaderBtn.setDisable(true);
+        clearHeaderBtn.setOnAction(e -> filterField.clear());
+        filterField.textProperty().addListener((obs, o, n) -> clearHeaderBtn.setDisable(n == null || n.isEmpty()));
 
-        filterBox.getChildren().addAll(filterLabel, filterField, countLabel);
+        filterBox.getChildren().addAll(filterLabel, filterField, clearHeaderBtn);
         header.getChildren().addAll(titleLabel, filterBox);
         return header;
     }
@@ -128,12 +135,12 @@ public class PrimaociListaScreen {
                 data.getValue().getEmail() != null ? data.getValue().getEmail() : ""));
         emailCol.setMinWidth(150);
 
-        TableColumn<Primalac, String> telefonCol = new TableColumn<>("Telefon");
-        telefonCol.setCellValueFactory(data -> new SimpleStringProperty(
-                data.getValue().getTelefon() != null ? data.getValue().getTelefon() : ""));
-        telefonCol.setMinWidth(90);
+        TableColumn<Primalac, String> mobilniCol = new TableColumn<>("Mobilni");
+        mobilniCol.setCellValueFactory(data -> new SimpleStringProperty(
+                data.getValue().getMobilni() != null ? data.getValue().getMobilni() : ""));
+        mobilniCol.setMinWidth(90);
 
-        table.getColumns().addAll(imeCol, prezimeCol, opstinaCol, emailCol, telefonCol);
+        table.getColumns().addAll(imeCol, prezimeCol, opstinaCol, emailCol, mobilniCol);
 
         // Dupli klik otvara detalje
         table.setRowFactory(tv -> {
@@ -155,12 +162,6 @@ public class PrimaociListaScreen {
         footer.setPadding(new Insets(10, 20, 10, 20));
         footer.setAlignment(Pos.CENTER_LEFT);
 
-        Button clearFilterBtn = new Button("Ukloni filter");
-        clearFilterBtn.setStyle("-fx-background-color: white; -fx-text-fill: #57606A; -fx-font-size: 13px; -fx-padding: 7 16; -fx-background-radius: 6; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-cursor: hand;");
-        clearFilterBtn.setOnMouseEntered(e -> clearFilterBtn.setStyle("-fx-background-color: #EEF2F7; -fx-text-fill: #57606A; -fx-font-size: 13px; -fx-padding: 7 16; -fx-background-radius: 6; -fx-border-color: #B3BEC8; -fx-border-width: 1; -fx-border-radius: 6; -fx-cursor: hand;"));
-        clearFilterBtn.setOnMouseExited(e -> clearFilterBtn.setStyle("-fx-background-color: white; -fx-text-fill: #57606A; -fx-font-size: 13px; -fx-padding: 7 16; -fx-background-radius: 6; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-cursor: hand;"));
-        clearFilterBtn.setOnAction(e -> filterField.clear());
-
         Button newBtn = new Button("Novi primalac");
         newBtn.setStyle("-fx-background-color: #0969DA; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 7 16; -fx-background-radius: 6; -fx-cursor: hand;");
         newBtn.setOnMouseEntered(e -> newBtn.setStyle("-fx-background-color: #0550AE; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 7 16; -fx-background-radius: 6; -fx-cursor: hand;"));
@@ -176,7 +177,7 @@ public class PrimaociListaScreen {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        footer.getChildren().addAll(clearFilterBtn, spacer, newBtn, closeBtn);
+        footer.getChildren().addAll(spacer, newBtn, closeBtn);
         return footer;
     }
 
@@ -204,15 +205,41 @@ public class PrimaociListaScreen {
 
         filteredData = new FilteredList<>(primaociData, p -> true);
         tableView.setItems(filteredData);
-        updateCount();
-    }
 
-    private void updateCount() {
-        int count = filteredData != null ? filteredData.size() : 0;
-        countLabel.setText(count + " zapisa");
+        // Vrati filter
+        if (!savedFilter.isEmpty()) {
+            filterField.setText(savedFilter);
+        }
+
+        // Vrati selekciju + skroluj — koristimo sceneProperty listener jer loadData()
+        // se poziva iz konstruktora, pre nego što je tabela dodata u scenu.
+        if (savedSelectedId != null) {
+            for (Primalac p : filteredData) {
+                if (savedSelectedId.equals(p.getIdZaposleni())) {
+                    tableView.getSelectionModel().select(p);
+                    int idx = tableView.getSelectionModel().getSelectedIndex();
+                    if (idx >= 0) {
+                        tableView.sceneProperty().addListener(new javafx.beans.value.ChangeListener<>() {
+                            @Override
+                            public void changed(javafx.beans.value.ObservableValue<? extends javafx.scene.Scene> obs,
+                                                javafx.scene.Scene old, javafx.scene.Scene n) {
+                                if (n != null) {
+                                    tableView.sceneProperty().removeListener(this);
+                                    Platform.runLater(() -> tableView.scrollTo(idx));
+                                }
+                            }
+                        });
+                    }
+                    break;
+                }
+            }
+        }
     }
 
     private void openPrimalacDetalji(Primalac primalac) {
+        // Sačuvaj stanje liste pre navigacije
+        savedFilter = filterField.getText();
+        savedSelectedId = primalac != null ? primalac.getIdZaposleni() : null;
         PrimalacDetaljiScreen detaljiScreen = new PrimalacDetaljiScreen(primalac);
         AppLayout.setContent(detaljiScreen.getRoot());
     }

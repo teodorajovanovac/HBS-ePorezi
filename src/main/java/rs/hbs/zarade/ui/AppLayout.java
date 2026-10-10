@@ -9,6 +9,16 @@ import javafx.scene.layout.BorderPane;
  */
 public class AppLayout {
 
+    /**
+     * Interfejs za ekrane koji štite nesačuvane izmene od gubitka pri navigaciji.
+     * Ekran setuje root.setUserData(DirtyCheckable) da aktivira zaštitu.
+     */
+    @FunctionalInterface
+    public interface DirtyCheckable {
+        /** Vraća true ako je OK navigirati dalje (nema izmena ili korisnik potvrdio). */
+        boolean confirmLeave();
+    }
+
     private static AppLayout instance;
 
     private BorderPane root;
@@ -38,11 +48,16 @@ public class AppLayout {
     }
 
     public static void setContent(Node content) {
-        getInstance().root.setCenter(content);
+        AppLayout inst = getInstance();
+        Node current = inst.root.getCenter();
+        if (current != null && current.getUserData() instanceof DirtyCheckable dc) {
+            if (!dc.confirmLeave()) return;
+        }
+        inst.root.setCenter(content);
     }
 
     public static void showWelcome() {
-        getInstance().root.setCenter(new WelcomeDashboard().getRoot());
+        setContent(new WelcomeDashboard().getRoot());
     }
 
     public BorderPane getRoot() {

@@ -23,29 +23,20 @@ public final class JmbgValidator {
     }
 
     /**
-     * Proverava validnost JMBG-a.
-     * Proverava samo da li ima tačno 13 cifara (bez provere kontrolnog broja).
+     * Proverava validnost JMBG-a (format + modulo 11 kontrolni broj).
      *
      * @param jmbg JMBG za proveru (13 cifara)
      * @return true ako je JMBG validan, false inače
      */
     public static boolean isValid(String jmbg) {
-        if (jmbg == null || jmbg.isEmpty()) {
-            return false;
-        }
-
-        // Mora imati tačno 13 karaktera
-        if (jmbg.length() != JMBG_LENGTH) {
-            return false;
-        }
-
-        // Mora biti numerički
-        return isNumeric(jmbg);
+        if (jmbg == null || jmbg.length() != JMBG_LENGTH) return false;
+        if (!isNumeric(jmbg)) return false;
+        return checkControlDigit(jmbg);
     }
 
     /**
      * Validira JMBG i vraća rezultat sa opisom greške.
-     * Proverava samo format (13 cifara), bez kontrolnog broja.
+     * Proverava format (13 cifara) i modulo 11 kontrolni broj.
      *
      * @param jmbg JMBG za proveru
      * @return ValidationResult sa statusom i porukom
@@ -54,16 +45,37 @@ public final class JmbgValidator {
         if (jmbg == null || jmbg.isEmpty()) {
             return new ValidationResult(false, "JMBG je obavezan");
         }
-
         if (jmbg.length() != JMBG_LENGTH) {
             return new ValidationResult(false, "JMBG mora imati tačno 13 cifara");
         }
-
         if (!isNumeric(jmbg)) {
             return new ValidationResult(false, "JMBG sme sadržati samo cifre");
         }
-
+        if (!checkControlDigit(jmbg)) {
+            return new ValidationResult(false, "JMBG nije ispravan (kontrolni broj)");
+        }
         return new ValidationResult(true, "JMBG je validan");
+    }
+
+    /**
+     * Proverava kontrolni broj JMBG-a algoritmom modulo 11.
+     * Formula: K = 11 - ((7*(d1+d7) + 6*(d2+d8) + 5*(d3+d9) + 4*(d4+d10) + 3*(d5+d11) + 2*(d6+d12)) % 11)
+     * Ako je K == 10 ili K == 11, onda K = 0
+     */
+    private static boolean checkControlDigit(String jmbg) {
+        int[] d = new int[13];
+        for (int i = 0; i < 13; i++) {
+            d[i] = Character.getNumericValue(jmbg.charAt(i));
+        }
+        int sum = 7 * (d[0] + d[6])
+                + 6 * (d[1] + d[7])
+                + 5 * (d[2] + d[8])
+                + 4 * (d[3] + d[9])
+                + 3 * (d[4] + d[10])
+                + 2 * (d[5] + d[11]);
+        int k = 11 - (sum % 11);
+        if (k == 10 || k == 11) k = 0;
+        return k == d[12];
     }
 
     /**

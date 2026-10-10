@@ -8,6 +8,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import rs.hbs.zarade.HbsZaradeApp;
+import rs.hbs.zarade.db.AppSettingsDao;
 import rs.hbs.zarade.db.DatabaseConfig;
 import rs.hbs.zarade.db.DatabaseConnection;
 import rs.hbs.zarade.db.StaffDao;
@@ -24,11 +25,11 @@ public class PodesavanjaScreen {
 
     private BorderPane root;
 
-    // Putanje
-    private TextField exportPathField;
-    private TextField dbCommonPathField;
+    // Putanje za export
+    private TextField exportXmlPathField;
+    private TextField exportPrimaocPdfField;
+    private TextField exportObracunPdfField;
     private TextField dbMainPathField;
-    private TextField dbCalcPathField;
 
     // Konstante obračuna
     private TextField minCenaRadaField;
@@ -91,42 +92,26 @@ public class PodesavanjaScreen {
     }
 
     private VBox createPutanjeTab() {
-        VBox content = new VBox(20);
+        VBox content = new VBox(16);
         content.setPadding(new Insets(30));
         content.setStyle("-fx-background-color: white;");
 
-        Label titleLabel = new Label("Putanje do fajlova i foldera");
+        Label titleLabel = new Label("Putanje za export fajlova");
         titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
         titleLabel.setTextFill(Color.web("#1F2328"));
 
-        VBox exportBox = new VBox(5);
-        Label exportLabel = new Label("Putanja za XML export:");
-        exportLabel.setFont(Font.font("System", FontWeight.BOLD, 12));
-        exportPathField = new TextField();
-        exportPathField.setPromptText("C:\\PROJECTS\\HBS-ZARADE\\EXPORT-EPOREZI");
-        HBox exportRow = new HBox(10);
-        Button browseExportBtn = new Button("...");
-        browseExportBtn.setOnAction(e -> browseFolder(exportPathField));
-        HBox.setHgrow(exportPathField, Priority.ALWAYS);
-        exportRow.getChildren().addAll(exportPathField, browseExportBtn);
-        exportBox.getChildren().addAll(exportLabel, exportRow);
+        exportXmlPathField   = createExportPathRow(content, "Folder za XML export (Poreska uprava):");
+        exportPrimaocPdfField = createExportPathRow(content, "Folder za PDF primaoci prihoda:");
+        exportObracunPdfField = createExportPathRow(content, "Folder za PDF zbirni obračun:");
 
         Separator sep1 = new Separator();
 
-        Label dbLabel = new Label("Putanje do baza podataka");
+        Label dbLabel = new Label("Baza podataka");
         dbLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
         dbLabel.setTextFill(Color.web("#1F2328"));
 
-        VBox commonBox = new VBox(5);
-        Label commonLabel = new Label("Common baza (aj_fn_cmn.mdb):");
-        commonLabel.setFont(Font.font("System", FontWeight.BOLD, 12));
-        dbCommonPathField = new TextField();
-        dbCommonPathField.setEditable(false);
-        dbCommonPathField.setStyle("-fx-background-color: #F6F8FA; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-text-fill: #848D97;");
-        commonBox.getChildren().addAll(commonLabel, dbCommonPathField);
-
         VBox mainBox = new VBox(5);
-        Label mainLabel = new Label("Main baza (data_zarade.mdb):");
+        Label mainLabel = new Label("Glavna baza (data_zarade.mdb):");
         mainLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
         mainLabel.setStyle("-fx-text-fill: #57606A;");
         dbMainPathField = new TextField();
@@ -134,27 +119,30 @@ public class PodesavanjaScreen {
         dbMainPathField.setStyle("-fx-background-color: #F6F8FA; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-text-fill: #848D97;");
         mainBox.getChildren().addAll(mainLabel, dbMainPathField);
 
-        VBox calcBox = new VBox(5);
-        Label calcLabel = new Label("Calc baza (obracun-honorara.mdb):");
-        calcLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
-        calcLabel.setStyle("-fx-text-fill: #57606A;");
-        dbCalcPathField = new TextField();
-        dbCalcPathField.setEditable(false);
-        dbCalcPathField.setStyle("-fx-background-color: #F6F8FA; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-text-fill: #848D97;");
-        calcBox.getChildren().addAll(calcLabel, dbCalcPathField);
+        Label infoLabel = new Label("Putanja do baze se podešava u fajlu app.local.properties");
+        infoLabel.setStyle("-fx-text-fill: #666; -fx-font-size: 11px;");
 
-        Label infoLabel = new Label(
-                "Napomena: Putanje do baza podataka se podešavaju u fajlu app.local.properties"
-        );
-        infoLabel.setStyle("-fx-text-fill: #666;");
-
-        content.getChildren().addAll(
-                titleLabel, exportBox,
-                sep1,
-                dbLabel, commonBox, mainBox, calcBox, infoLabel
-        );
+        content.getChildren().addAll(sep1, dbLabel, mainBox, infoLabel);
 
         return content;
+    }
+
+    /** Kreira red sa labelom, TextField-om i dugmetom za browse. Vraća TextField. */
+    private TextField createExportPathRow(VBox parent, String labelText) {
+        VBox box = new VBox(5);
+        Label lbl = new Label(labelText);
+        lbl.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
+        lbl.setStyle("-fx-text-fill: #57606A;");
+        TextField field = new TextField();
+        field.setStyle("-fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 5 10;");
+        Button btn = new Button("...");
+        btn.setStyle("-fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-cursor: hand; -fx-padding: 5 10;");
+        btn.setOnAction(e -> browseFolder(field));
+        HBox row = new HBox(10, field, btn);
+        HBox.setHgrow(field, Priority.ALWAYS);
+        box.getChildren().addAll(lbl, row);
+        parent.getChildren().add(box);
+        return field;
     }
 
     private VBox createKonstanteTab() {
@@ -303,7 +291,7 @@ public class PodesavanjaScreen {
         buttonsBox.getChildren().addAll(addBtn, editBtn, deleteBtn, refreshBtn);
 
         Label infoLabel = new Label(
-                "Napomena: Korisnički nalozi se čuvaju u tabeli Staff u aj_fn_cmn.mdb."
+                "Napomena: Korisnički nalozi se čuvaju u tabeli Staff u data_zarade.mdb."
         );
         infoLabel.setStyle("-fx-text-fill: #666;");
 
@@ -331,18 +319,34 @@ public class PodesavanjaScreen {
     }
 
     private void loadSettings() {
+        // Učitaj putanju do DB
         try {
             var dbConfig = DatabaseConfig.loadFromProperties();
             if (dbConfig != null) {
-                dbCommonPathField.setText(dbConfig.getCommonDbPath());
                 dbMainPathField.setText(dbConfig.getMainDbPath());
-                dbCalcPathField.setText(dbConfig.getCalcDbPath());
             }
         } catch (Exception e) {
             System.err.println("Greška pri učitavanju konfiguracije: " + e.getMessage());
         }
 
-        exportPathField.setText("C:\\PROJECTS\\HBS-ZARADE\\EXPORT-EPOREZI");
+        // Učitaj export putanje iz DB
+        try {
+            DatabaseConnection dbConn = DatabaseConnection.getInstance();
+            if (dbConn != null) {
+                try (java.sql.Connection conn = dbConn.getMainConnection()) {
+                    AppSettingsDao dao = new AppSettingsDao();
+                    String xml  = dao.getSetting(conn, AppSettingsDao.KEY_XML_EXPORT_PATH);
+                    String pri  = dao.getSetting(conn, AppSettingsDao.KEY_PRIMALAC_PDF_PATH);
+                    String obc  = dao.getSetting(conn, AppSettingsDao.KEY_OBRACUN_PDF_PATH);
+                    if (xml  != null) exportXmlPathField.setText(xml);
+                    if (pri  != null) exportPrimaocPdfField.setText(pri);
+                    if (obc  != null) exportObracunPdfField.setText(obc);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Greška pri učitavanju podešavanja: " + e.getMessage());
+        }
+
         minCenaRadaField.setText("271.00");
         poreskoOslobodjenjeField.setText("25000.00");
 
@@ -529,7 +533,19 @@ public class PodesavanjaScreen {
     }
 
     private void saveSettings() {
-        showInfo("Čuvanje", "Podešavanja bi bila sačuvana.\n(Funkcionalnost u razvoju)");
+        try {
+            DatabaseConnection dbConn = DatabaseConnection.getInstance();
+            if (dbConn == null) { showInfo("Greška", "Baza nije dostupna."); return; }
+            try (java.sql.Connection conn = dbConn.getMainConnection()) {
+                AppSettingsDao dao = new AppSettingsDao();
+                dao.saveSetting(conn, AppSettingsDao.KEY_XML_EXPORT_PATH,   exportXmlPathField.getText().trim());
+                dao.saveSetting(conn, AppSettingsDao.KEY_PRIMALAC_PDF_PATH, exportPrimaocPdfField.getText().trim());
+                dao.saveSetting(conn, AppSettingsDao.KEY_OBRACUN_PDF_PATH,  exportObracunPdfField.getText().trim());
+            }
+            showInfo("Sačuvano", "Podešavanja su uspješno sačuvana.");
+        } catch (Exception e) {
+            showInfo("Greška", "Nije moguće snimiti podešavanja: " + e.getMessage());
+        }
     }
 
     private void browseFolder(TextField targetField) {
