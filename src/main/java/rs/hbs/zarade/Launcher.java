@@ -34,8 +34,8 @@ public class Launcher {
         for (String loc : locations) {
             var p = Paths.get(loc);
             if (Files.exists(p)) {
-                try (InputStream is = Files.newInputStream(p)) {
-                    props.load(is);
+                try {
+                    props = rs.hbs.zarade.db.DatabaseConfig.loadProperties(p);
                 } catch (Exception ignored) {}
                 break;
             }

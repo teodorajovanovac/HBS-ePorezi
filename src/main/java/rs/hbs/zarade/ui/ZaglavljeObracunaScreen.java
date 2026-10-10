@@ -207,6 +207,11 @@ public class ZaglavljeObracunaScreen {
         poslodavacCombo.setMaxWidth(Double.MAX_VALUE);
         poslodavacCombo.setStyle("-fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-radius: 6;");
 
+        // Brzo biranje kucanjem početnog slova
+        ComboBoxHelper.makeSearchable(tipIsplateCombo);
+        ComboBoxHelper.makeSearchable(oznakaKonacnaCombo);
+        ComboBoxHelper.makeSearchable(poslodavacCombo);
+
         // Info box
         Label infoLabel = new Label(
                 "Napomena: Nakon izmena u zaglavlju potrebno je ažurirati XML podatke " +

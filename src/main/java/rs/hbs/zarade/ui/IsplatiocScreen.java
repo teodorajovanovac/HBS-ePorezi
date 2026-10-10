@@ -202,11 +202,10 @@ public class IsplatiocScreen {
                 sifraOpstineCombo.setValue(newVal);
         });
 
-        // Scroll do selektovane opštine pri otvaranju comboya
-        sifraOpstineCombo.setOnShowing(e -> Platform.runLater(() ->
-                scrollComboToSelected(sifraOpstineCombo)));
-        nazivOpstineCombo.setOnShowing(e -> Platform.runLater(() ->
-                scrollComboToSelected(nazivOpstineCombo)));
+        // Brzo biranje kucanjem početnog slova (type-ahead)
+        ComboBoxHelper.makeSearchable(nazivOpstineCombo, Opstina::getNaziv);
+        ComboBoxHelper.makeSearchable(sifraOpstineCombo, Opstina::getSifra);
+        ComboBoxHelper.makeSearchable(tipIsplatiocaCombo, VrstaIsplatioca::getNaziv);
 
         HBox sedisteRow = new HBox(10);
         sedisteRow.setAlignment(Pos.CENTER_LEFT);

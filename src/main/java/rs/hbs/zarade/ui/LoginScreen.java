@@ -3,6 +3,7 @@ package rs.hbs.zarade.ui;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
@@ -174,6 +175,11 @@ public class LoginScreen {
 
         loginBtn.setOnAction(event -> doLogin());
         passField.setOnAction(event -> doLogin());
+        userCombo.setOnKeyPressed(event -> {
+            if (event.getCode() == KeyCode.ENTER) {
+                doLogin();
+            }
+        });
 
         exitBtn.setOnAction(event -> System.exit(0));
 

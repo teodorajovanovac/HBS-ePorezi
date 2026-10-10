@@ -5,15 +5,26 @@
 # Kopirajte ovaj fajl u app.local.properties i prilagodite putanje.
 # Fajl app.local.properties NIJE u git-u (ignorisan je).
 #
-# Putanje mogu biti relativne (od root-a projekta) ili apsolutne.
+# Putanje mogu biti:
+#  1. Relativne (u odnosu na koren projekta ili ovaj konfiguracioni fajl):
+#     - db\data_zarade.mdb
+#     - ..\..\db\data_zarade.mdb
+#     - stari_access\db\data_zarade.mdb
+#     - stari_access/db/data_zarade.mdb
 #
+#  2. Apsolutne (kopirane direktno iz Windows Explorer-a):
+#     - C:\db\data_zarade.mdb
+#     - D:\Baze\data_zarade.mdb
+#
+# Separator može biti Windows backslash (\) ili slash (/).
+# Aplikacija automatski prepoznaje da li je u pitanju relativna ili apsolutna putanja.
 # =============================================================
 
 # Common/Shared baza (pomocne tabele, zajednicke sifre)
-db.common.path=stari_access/db/aj_fn_cmn.mdb
+db.common.path=stari_access\db\aj_fn_cmn.mdb
 
 # Glavna poslovna baza (primaoci, isplatioci, sifarnici)
-db.main.path=stari_access/db/data_zarade.mdb
+db.main.path=stari_access\db\data_zarade.mdb
 
 # Baza obracuna (obracuni i stavke obracuna)
-db.calc.path=stari_access/db/obracun-honorara.mdb
+db.calc.path=stari_access\db\obracun-honorara.mdb

@@ -35,9 +35,7 @@ import javafx.collections.transformation.FilteredList;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * Glavni pregled obračuna - Screen 8 iz UI specifikacije.
@@ -53,6 +51,9 @@ public class ObracuniScreen {
     private Label countLabel;
     private ObservableList<Obracun> obracuniData;
     private ObservableList<ObracunDefinicija> definicijeData;
+    private FilteredList<ObracunDefinicija> filteredDefinicije;
+    private FilteredList<Obracun> filteredObracuni;
+    private Map<Integer, Set<String>> obracunSvp3Map = new HashMap<>();
     private List<VrstaPrimaoca> svePrimaociTypes = new ArrayList<>();
     private List<VrstaPrihoda> svePrihodi = new ArrayList<>();
 
@@ -117,6 +118,11 @@ public class ObracuniScreen {
                 else setText(item.toString());
             }
         });
+
+        vrstaIsplateCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
+            applyFilterVrstaIsplate();
+        });
+        ComboBoxHelper.makeSearchable(vrstaIsplateCombo);
 
         filterBox.getChildren().addAll(vrstaLabel, vrstaIsplateCombo);
         header.getChildren().addAll(titleLabel, filterBox);
@@ -405,15 +411,17 @@ public class ObracuniScreen {
                 List<ObracunDefinicija> definicije = dao.findAll(conn);
 
                 definicijeData = FXCollections.observableArrayList(definicije);
-                obracunListView.setItems(definicijeData);
+                filteredDefinicije = new FilteredList<>(definicijeData, p -> true);
+                obracunListView.setItems(filteredDefinicije);
 
-                // Selektuj prvi obračun
-                if (!definicije.isEmpty()) {
-                    obracunListView.getSelectionModel().select(0);
-                }
+                // Učitaj mapu obracunId -> set svp3
+                refreshObracunSvp3Map(conn);
 
                 // Učitaj vrste prihoda iz DB za filter
                 loadVrstePrihoda(conn);
+
+                // Primeni inicijalni filter
+                applyFilterVrstaIsplate();
             }
         } catch (Exception e) {
             showError("Greška", "Ne mogu učitati definicije obračuna: " + e.getMessage());
@@ -442,6 +450,95 @@ public class ObracuniScreen {
         }
     }
 
+    private void refreshObracunSvp3Map() {
+        try {
+            DatabaseConnection dbConn = DatabaseConnection.getInstance();
+            if (dbConn != null) {
+                try (Connection conn = dbConn.getMainConnection()) {
+                    refreshObracunSvp3Map(conn);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Greška pri osvežavanju mape vrsta isplate: " + e.getMessage());
+        }
+    }
+
+    private void refreshObracunSvp3Map(Connection conn) {
+        try {
+            ObracunDao dao = new ObracunDao();
+            obracunSvp3Map = dao.findAllObracunDefSvp3Map(conn);
+        } catch (Exception e) {
+            System.err.println("Greška pri učitavanju mape vrsta isplate: " + e.getMessage());
+            if (obracunSvp3Map == null) {
+                obracunSvp3Map = new HashMap<>();
+            }
+        }
+    }
+
+    private String getCurrentFilterVpz() {
+        if (vrstaIsplateCombo == null) return null;
+        Object val = vrstaIsplateCombo.getValue();
+        if (val instanceof VrstaPrihoda vp) {
+            return vp.getVpz() != null ? vp.getVpz().trim() : null;
+        }
+        return null;
+    }
+
+    private void applyFilterVrstaIsplate() {
+        if (filteredDefinicije == null) return;
+
+        String filterVpz = getCurrentFilterVpz();
+        refreshObracunSvp3Map();
+
+        ObracunDefinicija previouslySelected = getSelectedDefinicija();
+
+        if (filterVpz == null || filterVpz.isEmpty()) {
+            filteredDefinicije.setPredicate(p -> true);
+        } else {
+            final String targetVpz = filterVpz;
+            filteredDefinicije.setPredicate(def -> {
+                if (def == null || def.getIdObracun() == null) return false;
+                Set<String> svpSet = obracunSvp3Map.get(def.getIdObracun());
+                if (svpSet != null && svpSet.contains(targetVpz)) {
+                    return true;
+                }
+                if (def.getOvp() != null && String.valueOf(def.getOvp()).equals(targetVpz)) {
+                    return true;
+                }
+                return false;
+            });
+        }
+
+        // Održi selekciju ili selektuj prvi dostupni obračun
+        if (previouslySelected != null && filteredDefinicije.contains(previouslySelected)) {
+            obracunListView.getSelectionModel().select(previouslySelected);
+            loadObracuniForDefinicija(previouslySelected);
+        } else if (!filteredDefinicije.isEmpty()) {
+            obracunListView.getSelectionModel().select(0);
+        } else {
+            obracunListView.getSelectionModel().clearSelection();
+            if (obracuniData != null) {
+                obracuniData.clear();
+            }
+            if (filteredObracuni != null) {
+                tableView.setItems(filteredObracuni);
+            }
+            updateSume();
+        }
+
+        applyTableFilter(filterVpz);
+    }
+
+    private void applyTableFilter(String filterVpz) {
+        if (filteredObracuni == null) return;
+        if (filterVpz == null || filterVpz.isEmpty()) {
+            filteredObracuni.setPredicate(p -> true);
+        } else {
+            filteredObracuni.setPredicate(o -> o != null && filterVpz.equals(o.getSvp3() != null ? o.getSvp3().trim() : null));
+        }
+        updateSume();
+    }
+
     private void loadObracuniForDefinicija(ObracunDefinicija selected) {
         if (selected == null) return;
 
@@ -459,7 +556,9 @@ public class ObracuniScreen {
             showError("Greška", "Ne mogu učitati stavke obračuna: " + e.getMessage());
         }
 
-        tableView.setItems(obracuniData);
+        filteredObracuni = new FilteredList<>(obracuniData);
+        applyTableFilter(getCurrentFilterVpz());
+        tableView.setItems(filteredObracuni);
         updateSume();
     }
 
@@ -468,14 +567,14 @@ public class ObracuniScreen {
         return obracunListView.getSelectionModel().getSelectedItem();
     }
 
-
     private void updateSume() {
-        int count = obracuniData != null ? obracuniData.size() : 0;
+        var items = (filteredObracuni != null) ? filteredObracuni : obracuniData;
+        int count = items != null ? items.size() : 0;
         BigDecimal sumaNeto = BigDecimal.ZERO;
         BigDecimal sumaBruto = BigDecimal.ZERO;
 
-        if (obracuniData != null) {
-            for (Obracun o : obracuniData) {
+        if (items != null) {
+            for (Obracun o : items) {
                 if (o.getNeto() != null) sumaNeto = sumaNeto.add(o.getNeto());
                 if (o.getBruto() != null) sumaBruto = sumaBruto.add(o.getBruto());
             }
@@ -604,6 +703,8 @@ public class ObracuniScreen {
                 }
             }
         }
+        ComboBoxHelper.makeSearchable(vrstaPrimaocaCombo, VrstaPrimaoca::getDisplayName);
+        ComboBoxHelper.makeSearchable(vrstaPrihodaCombo, VrstaPrihoda::getDisplayName);
 
         TextField napomenaField = new TextField();
         napomenaField.setPromptText("Napomena za ovaj obračun...");
@@ -698,7 +799,7 @@ public class ObracuniScreen {
 
         dialog.showAndWait().ifPresent(r -> {
             tableView.refresh();
-            updateSume();
+            applyFilterVrstaIsplate();
         });
     }
 
@@ -839,6 +940,10 @@ public class ObracuniScreen {
             novaStavka.setBruto(BigDecimal.ZERO);
             if (primalac.getVrstaPrimaocaId() != null) {
                 novaStavka.setSvp2(String.format("%02d", primalac.getVrstaPrimaocaId()));
+            }
+            String currentFilter = getCurrentFilterVpz();
+            if (currentFilter != null) {
+                novaStavka.setSvp3(currentFilter);
             }
 
             obracuniData.add(novaStavka);
@@ -1054,8 +1159,10 @@ public class ObracuniScreen {
                 new ObracunDefinicijaDao().delete(conn, selected.getIdObracun());
                 // Osveži UI
                 definicijeData.remove(selected);
+                obracunSvp3Map.remove(selected.getIdObracun());
                 obracuniData = FXCollections.observableArrayList();
-                tableView.setItems(obracuniData);
+                filteredObracuni = new FilteredList<>(obracuniData);
+                tableView.setItems(filteredObracuni);
                 updateSume();
             } catch (Exception e) {
                 showError("Greška", "Brisanje nije uspelo: " + e.getMessage());

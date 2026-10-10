@@ -32,6 +32,7 @@ public class StaffDao {
     /**
      * Autentifikuje korisnika po imenu i lozinci (plain text poređenje).
      * Vraća Staff objekat ako je autentifikacija uspešna, null inače.
+     * Podržava korisnike bez lozinke (StaffLogin je null ili prazan string).
      */
     public Staff authenticate(Connection conn, String username, String password) throws SQLException {
         String sql = "SELECT IDUser, [User], StaffLogin, Level, INC FROM Staff WHERE [User] = ? AND Level > 0";
@@ -42,7 +43,10 @@ public class StaffDao {
                     Staff staff = map(rs);
                     String storedPass = staff.getStaffLogin();
                     // Plain text poređenje — kao u VBA: stafLG = Format([StaffLogin])
-                    if (storedPass != null && storedPass.equals(password)) {
+                    // Ako korisnik u bazi nema lozinku (null ili prazno), dozvoljava se prijava kada je i unos prazan
+                    String stored = storedPass != null ? storedPass.trim() : "";
+                    String entered = password != null ? password.trim() : "";
+                    if (stored.equals(entered)) {
                         return staff;
                     }
                 }

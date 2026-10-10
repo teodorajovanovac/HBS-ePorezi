@@ -245,35 +245,9 @@ public class PrimalacDetaljiScreen {
                 sifraOpstineCombo.setValue(newVal);
         });
 
-        // Scroll do selektovane opštine pri otvaranju comboya
-        sifraOpstineCombo.setOnShowing(e -> Platform.runLater(() ->
-                scrollComboToSelected(sifraOpstineCombo)));
-        nazivOpstineCombo.setOnShowing(e -> Platform.runLater(() ->
-                scrollComboToSelected(nazivOpstineCombo)));
-
-        // Type-ahead za naziv opštine (kucanjem skače na prvu stavku koja počinje sa unetim tekstom)
-        StringBuilder typeBuffer = new StringBuilder();
-        PauseTransition resetType = new PauseTransition(Duration.seconds(1.5));
-        resetType.setOnFinished(e -> typeBuffer.setLength(0));
-        nazivOpstineCombo.setOnKeyTyped(event -> {
-            String ch = event.getCharacter();
-            if (ch == null || ch.isEmpty() || ch.charAt(0) < 32) return;
-            typeBuffer.append(ch.toLowerCase());
-            resetType.playFromStart();
-            String typed = typeBuffer.toString();
-            for (Opstina o : nazivOpstineCombo.getItems()) {
-                if (o.getNaziv() != null && o.getNaziv().toLowerCase().startsWith(typed)) {
-                    loading = true;
-                    nazivOpstineCombo.setValue(o);
-                    sifraOpstineCombo.setValue(o);
-                    loading = false;
-                    if (nazivOpstineCombo.isShowing()) {
-                        Platform.runLater(() -> scrollComboToSelected(nazivOpstineCombo));
-                    }
-                    break;
-                }
-            }
-        });
+        // Brzo biranje kucanjem početnog slova (type-ahead)
+        ComboBoxHelper.makeSearchable(nazivOpstineCombo, Opstina::getNaziv);
+        ComboBoxHelper.makeSearchable(sifraOpstineCombo, Opstina::getSifra);
 
         VBox mbBox = new VBox(4);
         Label mbLabel = new Label("MB/JMBG: *");
@@ -301,6 +275,7 @@ public class PrimalacDetaljiScreen {
         statusCombo = new ComboBox<>();
         statusCombo.getItems().addAll("Aktivan", "Neaktivan");
         statusCombo.setValue("Aktivan");
+        ComboBoxHelper.makeSearchable(statusCombo);
         statusBox.getChildren().addAll(statusLabel, statusCombo);
 
         HBox opstinaRow = new HBox(10);
@@ -379,6 +354,7 @@ public class PrimalacDetaljiScreen {
                 setText(empty || item == null ? "Izaberite vrstu primaoca..." : item.getDisplayName());
             }
         });
+        ComboBoxHelper.makeSearchable(vrstaPrimaocaCombo, VrstaPrimaoca::getDisplayName);
 
         Label vrstaPrimaocaLabel = new Label("Vrsta primaoca:");
         vrstaPrimaocaLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));

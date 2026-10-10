@@ -53,6 +53,9 @@ ui_reference/
 # ===============================
 *.accdb
 *.mdb
+*.ldb
+*.laccdb
+db/
 VBA_EXPORT/
 EXPORT/
 TEMP/
@@ -67,7 +70,7 @@ TEMP/
 # Claude / AI reference docs
 # ===============================
 CLAUDE.md
-app.local.properties
+# app.local.properties
 
 # ===============================
 # Claude Code lokalne postavke

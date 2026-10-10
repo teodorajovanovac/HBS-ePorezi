@@ -4,9 +4,7 @@ import rs.hbs.zarade.domain.Obracun;
 
 import java.math.BigDecimal;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 // Timestamp already included via java.sql.*
 
 /**
@@ -205,6 +203,29 @@ public class ObracunDao implements BaseDao<Obracun, Integer> {
             }
         }
         return 0;
+    }
+
+    /**
+     * Učitava mapu gde je ključ lnkObracun (ID_Obracun definicije),
+     * a vrednost skup svih SVP-3 kodova (vrste isplate/prihoda) koji se nalaze u tom obračunu.
+     *
+     * @param connection aktivna konekcija
+     * @return mapa lnkObracun -> set SVP-3 kodova
+     */
+    public Map<Integer, Set<String>> findAllObracunDefSvp3Map(Connection connection) throws SQLException {
+        Map<Integer, Set<String>> map = new HashMap<>();
+        String sql = "SELECT lnkObracun, [SVP-3] FROM Obracun WHERE lnkObracun IS NOT NULL AND [SVP-3] IS NOT NULL";
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                int lnk = rs.getInt(1);
+                String svp3 = rs.getString(2);
+                if (svp3 != null && !svp3.trim().isEmpty()) {
+                    map.computeIfAbsent(lnk, k -> new HashSet<>()).add(svp3.trim());
+                }
+            }
+        }
+        return map;
     }
 
     /**

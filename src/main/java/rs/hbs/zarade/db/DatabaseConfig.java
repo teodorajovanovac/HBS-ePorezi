@@ -4,9 +4,11 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.Properties;
 
 /**
@@ -68,31 +70,151 @@ public class DatabaseConfig {
                             "  - Parent folder: " + Paths.get("..").toAbsolutePath().normalize() + "\n" +
                             "  - Pored JAR fajla\n\n" +
                             "Kreirajte fajl sa putanjama do baza:\n" +
-                            "  db.common.path=C:/putanja/do/aj_fn_cmn.mdb\n" +
-                            "  db.main.path=C:/putanja/do/data_zarade.mdb\n" +
-                            "  db.calc.path=C:/putanja/do/obracun-honorara.mdb"
+                            "  db.common.path=C:\\putanja\\do\\aj_fn_cmn.mdb (ili npr. db\\aj_fn_cmn.mdb)\n" +
+                            "  db.main.path=C:\\putanja\\do\\data_zarade.mdb\n" +
+                            "  db.calc.path=C:\\putanja\\do\\obracun-honorara.mdb"
             );
         }
 
         System.out.println("Koristi se konfiguracija: " + configPath.toAbsolutePath());
 
-        Properties props = new Properties();
-        try (InputStream is = new FileInputStream(configPath.toFile())) {
-            props.load(is);
+        Properties props;
+        try {
+            props = loadProperties(configPath);
         } catch (IOException e) {
             throw new DatabaseConfigException("Greska pri citanju konfiguracionog fajla: " + e.getMessage(), e);
         }
 
-        String mainPath = getRequiredProperty(props, KEY_DB_MAIN);
-        validateDatabaseFile(mainPath, KEY_DB_MAIN);
+        Path configDir = configPath.toAbsolutePath().getParent();
+
+        String rawMain = getRequiredProperty(props, KEY_DB_MAIN);
+        Path mainPath = resolveDatabasePath(rawMain, configDir);
+        validateDatabaseFile(mainPath, KEY_DB_MAIN, rawMain);
 
         // common i calc su opcioni — ne moraju biti konfigurisani
-        String commonPath = props.getProperty(KEY_DB_COMMON, "").trim();
-        String calcPath = props.getProperty(KEY_DB_CALC, "").trim();
-        if (!commonPath.isEmpty()) validateDatabaseFile(commonPath, KEY_DB_COMMON);
-        if (!calcPath.isEmpty()) validateDatabaseFile(calcPath, KEY_DB_CALC);
+        String rawCommon = props.getProperty(KEY_DB_COMMON, "").trim();
+        String rawCalc = props.getProperty(KEY_DB_CALC, "").trim();
 
-        return new DatabaseConfig(commonPath, mainPath, calcPath);
+        Path commonPath = null;
+        if (!rawCommon.isEmpty()) {
+            commonPath = resolveDatabasePath(rawCommon, configDir);
+            validateDatabaseFile(commonPath, KEY_DB_COMMON, rawCommon);
+        }
+
+        Path calcPath = null;
+        if (!rawCalc.isEmpty()) {
+            calcPath = resolveDatabasePath(rawCalc, configDir);
+            validateDatabaseFile(calcPath, KEY_DB_CALC, rawCalc);
+        }
+
+        return new DatabaseConfig(
+                commonPath != null ? commonPath.toString() : "",
+                mainPath.toString(),
+                calcPath != null ? calcPath.toString() : ""
+        );
+    }
+
+    /**
+     * Učitava properties fajl tako da podržava Windows backslash separator (\)
+     * bez escape-ovanja, što omogućava direktno kopiranje putanja iz Windows Explorer-a.
+     */
+    public static Properties loadProperties(Path configPath) throws IOException {
+        Properties props = new Properties();
+        List<String> lines;
+        try {
+            lines = Files.readAllLines(configPath, StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            lines = Files.readAllLines(configPath, StandardCharsets.ISO_8859_1);
+        }
+
+        for (String line : lines) {
+            if (line.startsWith("\uFEFF")) {
+                line = line.substring(1);
+            }
+            String trimmed = line.trim();
+            if (trimmed.isEmpty() || trimmed.startsWith("#") || trimmed.startsWith("!")) {
+                continue;
+            }
+
+            int eqIndex = trimmed.indexOf('=');
+            int colonIndex = trimmed.indexOf(':');
+            int sepIndex;
+            if (eqIndex != -1 && colonIndex != -1) {
+                sepIndex = Math.min(eqIndex, colonIndex);
+            } else if (eqIndex != -1) {
+                sepIndex = eqIndex;
+            } else {
+                sepIndex = colonIndex;
+            }
+
+            if (sepIndex != -1) {
+                String key = trimmed.substring(0, sepIndex).trim();
+                String value = trimmed.substring(sepIndex + 1).trim();
+                if ((value.startsWith("\"") && value.endsWith("\"")) ||
+                    (value.startsWith("'") && value.endsWith("'"))) {
+                    if (value.length() >= 2) {
+                        value = value.substring(1, value.length() - 1).trim();
+                    }
+                }
+                props.setProperty(key, value);
+            }
+        }
+        return props;
+    }
+
+    /**
+     * Razrešava putanju do baze podataka.
+     * Automatski prepoznaje da li je putanja apsolutna ili relativna:
+     * - Apsolutna: npr. C:\db\baza.mdb, C:/db/baza.mdb, \\server\share\baza.mdb
+     * - Relativna: npr. db\baza.mdb, ..\..\db\baza.mdb, stari_access/db/baza.mdb
+     *
+     * Podržava i Windows backslash (\) i standardni slash (/).
+     * Relativne putanje se razrešavaju u odnosu na lokaciju app.local.properties
+     * konfiguracionog fajla (ili radnog direktorijuma).
+     *
+     * @param rawPath putanja uneta u konfiguraciji
+     * @param configDir direktorijum u kome se nalazi app.local.properties fajl
+     * @return razrešena apsolutna i normalizovana Path putanja
+     */
+    public static Path resolveDatabasePath(String rawPath, Path configDir) {
+        if (rawPath == null || rawPath.trim().isEmpty()) {
+            return null;
+        }
+
+        String cleaned = rawPath.trim();
+        if ((cleaned.startsWith("\"") && cleaned.endsWith("\"")) ||
+            (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
+            if (cleaned.length() >= 2) {
+                cleaned = cleaned.substring(1, cleaned.length() - 1).trim();
+            }
+        }
+
+        Path p = Paths.get(cleaned);
+
+        // 1. Ako je putanja apsolutna (npr. C:\db\baza.mdb, C:/db/baza.mdb, \\server\share\baza.mdb)
+        if (p.isAbsolute()) {
+            return p.normalize().toAbsolutePath();
+        }
+
+        // 2. Ako je relativna, prvo probaj u odnosu na folder konfiguracionog fajla
+        if (configDir != null) {
+            Path fromConfigDir = configDir.resolve(p).normalize().toAbsolutePath();
+            if (Files.exists(fromConfigDir)) {
+                return fromConfigDir;
+            }
+        }
+
+        // 3. Probaj u odnosu na trenutni radni direktorijum
+        Path fromWorkingDir = Paths.get(".").toAbsolutePath().resolve(p).normalize().toAbsolutePath();
+        if (Files.exists(fromWorkingDir)) {
+            return fromWorkingDir;
+        }
+
+        // 4. Ako fajl ne postoji (za jasnu poruku o grešci), koristi konfiguracioni folder kao osnovu
+        if (configDir != null) {
+            return configDir.resolve(p).normalize().toAbsolutePath();
+        }
+        return fromWorkingDir;
     }
 
     /**
@@ -150,16 +272,20 @@ public class DatabaseConfig {
         return value.trim();
     }
 
-    private static void validateDatabaseFile(String path, String keyName) throws DatabaseConfigException {
-        Path dbPath = Paths.get(path);
+    private static void validateDatabaseFile(Path dbPath, String keyName, String rawConfigValue) throws DatabaseConfigException {
+        if (dbPath == null) {
+            throw new DatabaseConfigException("Putanja za '" + keyName + "' nije zadata.");
+        }
         if (!Files.exists(dbPath)) {
             throw new DatabaseConfigException(
-                    "Baza podataka (" + keyName + ") ne postoji na putanji: " + path
+                    "Baza podataka (" + keyName + ") ne postoji na putanji: " + dbPath + "\n" +
+                    "  (Konfigurisana vrednost u " + CONFIG_FILE + ": " + rawConfigValue + ")"
             );
         }
         if (!Files.isReadable(dbPath)) {
             throw new DatabaseConfigException(
-                    "Baza podataka (" + keyName + ") nije citljiva: " + path
+                    "Baza podataka (" + keyName + ") nije citljiva: " + dbPath + "\n" +
+                    "  (Konfigurisana vrednost u " + CONFIG_FILE + ": " + rawConfigValue + ")"
             );
         }
     }
