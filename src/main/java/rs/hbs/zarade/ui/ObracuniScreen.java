@@ -22,6 +22,11 @@ import rs.hbs.zarade.reporting.XmlExporter;
 // AppLayout used directly (same package)
 import rs.hbs.zarade.db.ObracunDao;
 import rs.hbs.zarade.db.ObracunDefinicijaDao;
+import rs.hbs.zarade.db.ObracunStopeDao;
+import rs.hbs.zarade.domain.ObracunStope;
+import rs.hbs.zarade.service.ObracunService;
+import rs.hbs.zarade.util.NumberFormats;
+import rs.hbs.zarade.db.IzvestajPrihodiDao;
 import rs.hbs.zarade.db.PrimalacDao;
 import rs.hbs.zarade.db.VrstaPrihodaDao;
 import rs.hbs.zarade.db.VrstaPrimaocaDao;
@@ -81,7 +86,8 @@ public class ObracuniScreen {
 
     private VBox createHeader() {
         VBox header = new VBox(8);
-        header.setStyle("-fx-background-color: #FFFFFF; -fx-border-color: transparent transparent #D0D7DE transparent; -fx-border-width: 0 0 1 0;");
+        header.setStyle(
+                "-fx-background-color: #FFFFFF; -fx-border-color: transparent transparent #D0D7DE transparent; -fx-border-width: 0 0 1 0;");
         header.setPadding(new Insets(14, 16, 14, 16));
 
         // Naslov
@@ -104,18 +110,24 @@ public class ObracuniScreen {
             @Override
             protected void updateItem(Object item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty || item == null) setText(null);
-                else if (item instanceof VrstaPrihoda vp) setText(vp.getVpz() + " - " + vp.getNaziv());
-                else setText(item.toString());
+                if (empty || item == null)
+                    setText(null);
+                else if (item instanceof VrstaPrihoda vp)
+                    setText(vp.getVpz() + " - " + vp.getNaziv());
+                else
+                    setText(item.toString());
             }
         });
         vrstaIsplateCombo.setButtonCell(new ListCell<>() {
             @Override
             protected void updateItem(Object item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty || item == null) setText(null);
-                else if (item instanceof VrstaPrihoda vp) setText(vp.getVpz() + " - " + vp.getNaziv());
-                else setText(item.toString());
+                if (empty || item == null)
+                    setText(null);
+                else if (item instanceof VrstaPrihoda vp)
+                    setText(vp.getVpz() + " - " + vp.getNaziv());
+                else
+                    setText(item.toString());
             }
         });
 
@@ -138,7 +150,7 @@ public class ObracuniScreen {
         obracunListView.setCellFactory(lv -> new ListCell<>() {
             private final Label nameL = new Label();
             private final Label mesecL = new Label();
-            private final Label ovpL  = new Label();
+            private final Label ovpL = new Label();
             private final VBox cellBox = new VBox(3, nameL, mesecL);
             {
                 nameL.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
@@ -151,10 +163,12 @@ public class ObracuniScreen {
                 setStyle("-fx-border-color: transparent transparent #E8ECF0 transparent; -fx-border-width: 0 0 1 0;");
                 selectedProperty().addListener((obs, was, isNow) -> applyColors(isNow));
             }
+
             private void applyColors(boolean selected) {
                 nameL.setTextFill(Color.web(selected ? "#1F2328" : "#57606A"));
                 mesecL.setTextFill(Color.web(selected ? "#424953" : "#848D97"));
             }
+
             @Override
             protected void updateItem(ObracunDefinicija item, boolean empty) {
                 super.updateItem(item, empty);
@@ -176,7 +190,8 @@ public class ObracuniScreen {
             }
         });
 
-        // Kad se klikne na stavku u listi → učitaj obračune; dupli klik → edit zaglavlja
+        // Kad se klikne na stavku u listi → učitaj obračune; dupli klik → edit
+        // zaglavlja
         obracunListView.getSelectionModel().selectedItemProperty().addListener(
                 (obs, oldVal, newVal) -> {
                     if (newVal != null) {
@@ -201,16 +216,22 @@ public class ObracuniScreen {
         listTitle.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
         // Edit dugme sa olovkom
         Button editDefBtn = new Button("✏");
-        editDefBtn.setStyle("-fx-background-color: #3A4A5E; -fx-text-fill: #E6EDF3; -fx-font-size: 15px; -fx-padding: 3 10; -fx-cursor: hand; -fx-background-radius: 5;");
-        editDefBtn.setOnMouseEntered(e -> editDefBtn.setStyle("-fx-background-color: #4493F8; -fx-text-fill: white; -fx-font-size: 15px; -fx-padding: 3 10; -fx-cursor: hand; -fx-background-radius: 5;"));
-        editDefBtn.setOnMouseExited(e -> editDefBtn.setStyle("-fx-background-color: #3A4A5E; -fx-text-fill: #E6EDF3; -fx-font-size: 15px; -fx-padding: 3 10; -fx-cursor: hand; -fx-background-radius: 5;"));
+        editDefBtn.setStyle(
+                "-fx-background-color: #3A4A5E; -fx-text-fill: #E6EDF3; -fx-font-size: 15px; -fx-padding: 3 10; -fx-cursor: hand; -fx-background-radius: 5;");
+        editDefBtn.setOnMouseEntered(e -> editDefBtn.setStyle(
+                "-fx-background-color: #4493F8; -fx-text-fill: white; -fx-font-size: 15px; -fx-padding: 3 10; -fx-cursor: hand; -fx-background-radius: 5;"));
+        editDefBtn.setOnMouseExited(e -> editDefBtn.setStyle(
+                "-fx-background-color: #3A4A5E; -fx-text-fill: #E6EDF3; -fx-font-size: 15px; -fx-padding: 3 10; -fx-cursor: hand; -fx-background-radius: 5;"));
         editDefBtn.setTooltip(new Tooltip("Izmeni zaglavlje obračuna"));
         editDefBtn.setOnAction(e -> openObracunDetalji());
         // Delete dugme sa kantom
         Button deleteDefBtn = new Button("🗑");
-        deleteDefBtn.setStyle("-fx-background-color: #6E2020; -fx-text-fill: #FFAAAA; -fx-font-size: 15px; -fx-padding: 3 10; -fx-cursor: hand; -fx-background-radius: 5;");
-        deleteDefBtn.setOnMouseEntered(e -> deleteDefBtn.setStyle("-fx-background-color: #CF222E; -fx-text-fill: white; -fx-font-size: 15px; -fx-padding: 3 10; -fx-cursor: hand; -fx-background-radius: 5;"));
-        deleteDefBtn.setOnMouseExited(e -> deleteDefBtn.setStyle("-fx-background-color: #6E2020; -fx-text-fill: #FFAAAA; -fx-font-size: 15px; -fx-padding: 3 10; -fx-cursor: hand; -fx-background-radius: 5;"));
+        deleteDefBtn.setStyle(
+                "-fx-background-color: #6E2020; -fx-text-fill: #FFAAAA; -fx-font-size: 15px; -fx-padding: 3 10; -fx-cursor: hand; -fx-background-radius: 5;");
+        deleteDefBtn.setOnMouseEntered(e -> deleteDefBtn.setStyle(
+                "-fx-background-color: #CF222E; -fx-text-fill: white; -fx-font-size: 15px; -fx-padding: 3 10; -fx-cursor: hand; -fx-background-radius: 5;"));
+        deleteDefBtn.setOnMouseExited(e -> deleteDefBtn.setStyle(
+                "-fx-background-color: #6E2020; -fx-text-fill: #FFAAAA; -fx-font-size: 15px; -fx-padding: 3 10; -fx-cursor: hand; -fx-background-radius: 5;"));
         deleteDefBtn.setTooltip(new Tooltip("Obriši obračun"));
         deleteDefBtn.setOnAction(e -> deleteObracunDefinicija());
         Region listSpacer = new Region();
@@ -222,12 +243,19 @@ public class ObracuniScreen {
 
         // Desna strana: tabela stavki
         tableView = createTable();
-        HBox.setHgrow(tableView, Priority.ALWAYS);
+        tableView.setMinWidth(0);
+
+        // Wrapper daje desni razmak i dozvoljava tabeli da se skuplja kad prozor nije maksimiziran
+        StackPane tableWrap = new StackPane(tableView);
+        tableWrap.setPadding(new Insets(0, 16, 0, 0));
+        tableWrap.setMinWidth(0);
+        HBox.setHgrow(tableWrap, Priority.ALWAYS);
+        leftPanel.setMinWidth(240);
 
         HBox centerBox = new HBox(0);
         Separator vertSep = new Separator();
         vertSep.setOrientation(javafx.geometry.Orientation.VERTICAL);
-        centerBox.getChildren().addAll(leftPanel, vertSep, tableView);
+        centerBox.getChildren().addAll(leftPanel, vertSep, tableWrap);
         return centerBox;
     }
 
@@ -245,33 +273,35 @@ public class ObracuniScreen {
                     (o.getIme() != null ? o.getIme() : "");
             return new SimpleStringProperty(name.trim());
         });
-        primalacCol.setMinWidth(160);
+        primalacCol.setMinWidth(120);
 
         TableColumn<Obracun, String> vrstaPrimaocaCol = new TableColumn<>("Vrsta primaoca");
-        vrstaPrimaocaCol.setCellValueFactory(data ->
-                new SimpleStringProperty(data.getValue().getSvp2() != null ? data.getValue().getSvp2() : ""));
-        vrstaPrimaocaCol.setMinWidth(145);
+        vrstaPrimaocaCol.setCellValueFactory(
+                data -> new SimpleStringProperty(data.getValue().getSvp2() != null ? data.getValue().getSvp2() : ""));
+        vrstaPrimaocaCol.setMinWidth(100);
+        vrstaPrimaocaCol.setMaxWidth(130);
 
         TableColumn<Obracun, String> vrstaIsplateCol = new TableColumn<>("Vrsta isplate");
-        vrstaIsplateCol.setCellValueFactory(data ->
-                new SimpleStringProperty(data.getValue().getSvp3() != null ? data.getValue().getSvp3() : ""));
-        vrstaIsplateCol.setMinWidth(120);
+        vrstaIsplateCol.setCellValueFactory(
+                data -> new SimpleStringProperty(data.getValue().getSvp3() != null ? data.getValue().getSvp3() : ""));
+        vrstaIsplateCol.setMinWidth(85);
+        vrstaIsplateCol.setMaxWidth(110);
 
         TableColumn<Obracun, String> netoCol = new TableColumn<>("Neto iznos");
         netoCol.setCellValueFactory(data -> {
             BigDecimal neto = data.getValue().getNeto();
-            return new SimpleStringProperty(neto != null ? String.format("%,.2f", neto) : "0,00");
+            return new SimpleStringProperty(neto != null ? NumberFormats.money(neto) : "0,00");
         });
         netoCol.setMinWidth(110);
-        netoCol.setStyle("-fx-alignment: CENTER-RIGHT;");
+        netoCol.setStyle("-fx-alignment: CENTER-RIGHT; -fx-padding: 0 12 0 0;");
 
         TableColumn<Obracun, String> brutoCol = new TableColumn<>("Bruto iznos");
         brutoCol.setCellValueFactory(data -> {
             BigDecimal bruto = data.getValue().getBruto();
-            return new SimpleStringProperty(bruto != null ? String.format("%,.2f", bruto) : "0,00");
+            return new SimpleStringProperty(bruto != null ? NumberFormats.money(bruto) : "0,00");
         });
         brutoCol.setMinWidth(110);
-        brutoCol.setStyle("-fx-alignment: CENTER-RIGHT;");
+        brutoCol.setStyle("-fx-alignment: CENTER-RIGHT; -fx-padding: 0 18 0 0;");
 
         table.getColumns().addAll(primalacCol, vrstaPrimaocaCol, vrstaIsplateCol, netoCol, brutoCol);
 
@@ -280,34 +310,26 @@ public class ObracuniScreen {
             TableRow<Obracun> row = new TableRow<>();
 
             MenuItem editItem = new MenuItem("Izmeni stavku");
-            editItem.setOnAction(e -> { if (!row.isEmpty()) editObracunStavka(row.getItem()); });
+            editItem.setOnAction(e -> {
+                if (!row.isEmpty())
+                    editObracunStavka(row.getItem());
+            });
 
             MenuItem deleteItem = new MenuItem("Ukloni primaoca iz obračuna");
             deleteItem.setStyle("-fx-text-fill: #CF222E;");
-            deleteItem.setOnAction(e -> {
-                Obracun item = row.getItem();
-                if (item == null) return;
-                Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-                confirm.setTitle("Brisanje stavke");
-                confirm.setHeaderText("Ukloni primaoca iz obračuna?");
-                confirm.setContentText(item.getPrezime() + " " + item.getIme());
-                ButtonType btnObrisi = new ButtonType("Ukloni", ButtonBar.ButtonData.OK_DONE);
-                ButtonType btnOtkazi = new ButtonType("Otkaži", ButtonBar.ButtonData.CANCEL_CLOSE);
-                confirm.getButtonTypes().setAll(btnObrisi, btnOtkazi);
-                confirm.showAndWait().ifPresent(btn -> {
-                    if (btn == btnObrisi) {
-                        obracuniData.remove(item);
-                        updateSume();
-                    }
-                });
+            deleteItem.setOnAction(e -> ukloniStavku(row.getItem()));
+
+            MenuItem primalacItem = new MenuItem("Podaci primaoca");
+            primalacItem.setOnAction(e -> {
+                if (!row.isEmpty())
+                    openPodaciPrimaoca(row.getItem());
             });
 
-            ContextMenu contextMenu = new ContextMenu(editItem, new SeparatorMenuItem(), deleteItem);
+            ContextMenu contextMenu = new ContextMenu(editItem, new SeparatorMenuItem(), deleteItem, primalacItem);
             row.contextMenuProperty().bind(
-                javafx.beans.binding.Bindings.when(row.emptyProperty())
-                    .then((ContextMenu) null)
-                    .otherwise(contextMenu)
-            );
+                    javafx.beans.binding.Bindings.when(row.emptyProperty())
+                            .then((ContextMenu) null)
+                            .otherwise(contextMenu));
 
             row.setOnMouseClicked(event -> {
                 if (event.getClickCount() == 2 && !row.isEmpty()) {
@@ -317,12 +339,47 @@ public class ObracuniScreen {
             return row;
         });
 
+        table.setOnKeyPressed(event -> {
+            if (event.getCode() == javafx.scene.input.KeyCode.DELETE) {
+                ukloniStavku(table.getSelectionModel().getSelectedItem());
+            }
+        });
+
         return table;
+    }
+
+    /** Uklanja primaoca iz obračuna (uz potvrdu) i briše stavku iz baze. */
+    private void ukloniStavku(Obracun item) {
+        if (item == null)
+            return;
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Brisanje stavke");
+        confirm.setHeaderText("Ukloni primaoca iz obračuna?");
+        confirm.setContentText(item.getPrezime() + " " + item.getIme());
+        ButtonType btnObrisi = new ButtonType("Ukloni", ButtonBar.ButtonData.OK_DONE);
+        ButtonType btnOtkazi = new ButtonType("Otkaži", ButtonBar.ButtonData.CANCEL_CLOSE);
+        confirm.getButtonTypes().setAll(btnObrisi, btnOtkazi);
+        Optional<ButtonType> res = confirm.showAndWait();
+        if (res.isEmpty() || res.get() != btnObrisi)
+            return;
+
+        try {
+            if (item.getIdPobracun() != null) {
+                new ObracunDao().delete(DatabaseConnection.getInstance().getMainConnection(), item.getIdPobracun());
+            }
+        } catch (Exception ex) {
+            showError("Greška", "Brisanje stavke nije uspelo: " + ex.getMessage());
+            return;
+        }
+        obracuniData.remove(item);
+        refreshObracunSvp3Map();
+        updateSume();
     }
 
     private VBox createFooter() {
         VBox footer = new VBox(10);
-        footer.setStyle("-fx-background-color: #F6F8FA; -fx-border-color: #D0D7DE transparent transparent transparent; -fx-border-width: 1 0 0 0;");
+        footer.setStyle(
+                "-fx-background-color: #F6F8FA; -fx-border-color: #D0D7DE transparent transparent transparent; -fx-border-width: 1 0 0 0;");
         footer.setPadding(new Insets(10, 20, 10, 20));
 
         // Red sa sumama
@@ -335,11 +392,13 @@ public class ObracuniScreen {
 
         sumaNetoLabel = new Label("NETO: 0,00 RSD");
         sumaNetoLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
-        sumaNetoLabel.setStyle("-fx-background-color: #DDF4FF; -fx-text-fill: #0969DA; -fx-padding: 5 14; -fx-background-radius: 4;");
+        sumaNetoLabel.setStyle(
+                "-fx-background-color: #DDF4FF; -fx-text-fill: #0969DA; -fx-padding: 5 14; -fx-background-radius: 4;");
 
         sumaBrutoLabel = new Label("BRUTO: 0,00 RSD");
         sumaBrutoLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
-        sumaBrutoLabel.setStyle("-fx-background-color: #D4EFD9; -fx-text-fill: #1A7F37; -fx-padding: 5 14; -fx-background-radius: 4;");
+        sumaBrutoLabel.setStyle(
+                "-fx-background-color: #D4EFD9; -fx-text-fill: #1A7F37; -fx-padding: 5 14; -fx-background-radius: 4;");
 
         sumeBox.getChildren().addAll(countLabel, sumaNetoLabel, sumaBrutoLabel);
 
@@ -348,10 +407,35 @@ public class ObracuniScreen {
         buttonsBox.setAlignment(Pos.CENTER);
 
         Button autoObradaBtn = new Button("Automatska obrada");
-        autoObradaBtn.setStyle("-fx-background-color: #1A7F37; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-cursor: hand;");
-        autoObradaBtn.setOnMouseEntered(e -> autoObradaBtn.setStyle("-fx-background-color: #116329; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-cursor: hand;"));
-        autoObradaBtn.setOnMouseExited(e -> autoObradaBtn.setStyle("-fx-background-color: #1A7F37; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-cursor: hand;"));
+        autoObradaBtn.setStyle(
+                "-fx-background-color: #1A7F37; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-cursor: hand;");
+        autoObradaBtn.setOnMouseEntered(e -> autoObradaBtn.setStyle(
+                "-fx-background-color: #116329; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-cursor: hand;"));
+        autoObradaBtn.setOnMouseExited(e -> autoObradaBtn.setStyle(
+                "-fx-background-color: #1A7F37; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-cursor: hand;"));
         autoObradaBtn.setOnAction(e -> runAutomatskaObrada());
+
+        // Taster je skriven; Shift+Ctrl+Insert ga prikazuje/sakriva (važi dok je ovaj ekran u sceni)
+        autoObradaBtn.setVisible(false);
+        autoObradaBtn.setManaged(false);
+        javafx.scene.input.KeyCombination toggleCombo = new javafx.scene.input.KeyCodeCombination(
+                javafx.scene.input.KeyCode.INSERT,
+                javafx.scene.input.KeyCombination.SHIFT_DOWN,
+                javafx.scene.input.KeyCombination.CONTROL_DOWN);
+        javafx.event.EventHandler<javafx.scene.input.KeyEvent> toggleHandler = ev -> {
+            if (toggleCombo.match(ev)) {
+                boolean show = !autoObradaBtn.isVisible();
+                autoObradaBtn.setVisible(show);
+                autoObradaBtn.setManaged(show);
+                ev.consume();
+            }
+        };
+        root.sceneProperty().addListener((obs, oldScene, newScene) -> {
+            if (oldScene != null)
+                oldScene.removeEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, toggleHandler);
+            if (newScene != null)
+                newScene.addEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, toggleHandler);
+        });
 
         // Pojedinačna obrada - zakomentarisano
         // Button pojedinacnaBtn = new Button("Pojedinačna obrada");
@@ -361,42 +445,65 @@ public class ObracuniScreen {
         // Button izvestaj1Btn = new Button("Izveštaj 1");
         // izvestaj1Btn.setOnAction(e -> generateIzvestaj("zbirni"));
 
-        Button izvestajPojedinacniBtn = new Button("Izveštaj PDF");
-        izvestajPojedinacniBtn.setStyle("-fx-background-color: white; -fx-text-fill: #1F2328; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-cursor: hand;");
-        izvestajPojedinacniBtn.setOnMouseEntered(e -> izvestajPojedinacniBtn.setStyle("-fx-background-color: #EEF2F7; -fx-text-fill: #1F2328; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-border-color: #B3BEC8; -fx-border-width: 1; -fx-border-radius: 6; -fx-cursor: hand;"));
-        izvestajPojedinacniBtn.setOnMouseExited(e -> izvestajPojedinacniBtn.setStyle("-fx-background-color: white; -fx-text-fill: #1F2328; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-cursor: hand;"));
+        Button izvestajPojedinacniBtn = new Button("Izveštaj obračun");
+        izvestajPojedinacniBtn.setStyle(
+                "-fx-background-color: white; -fx-text-fill: #1F2328; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-cursor: hand;");
+        izvestajPojedinacniBtn.setOnMouseEntered(e -> izvestajPojedinacniBtn.setStyle(
+                "-fx-background-color: #EEF2F7; -fx-text-fill: #1F2328; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-border-color: #B3BEC8; -fx-border-width: 1; -fx-border-radius: 6; -fx-cursor: hand;"));
+        izvestajPojedinacniBtn.setOnMouseExited(e -> izvestajPojedinacniBtn.setStyle(
+                "-fx-background-color: white; -fx-text-fill: #1F2328; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-cursor: hand;"));
         izvestajPojedinacniBtn.setOnAction(e -> generateIzvestaj("zbirni"));
 
+        Button potvrdeBtn = new Button("Potvrde obračuna");
+        potvrdeBtn.setStyle(
+                "-fx-background-color: white; -fx-text-fill: #1F2328; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-cursor: hand;");
+        potvrdeBtn.setOnMouseEntered(e -> potvrdeBtn.setStyle(
+                "-fx-background-color: #EEF2F7; -fx-text-fill: #1F2328; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-border-color: #B3BEC8; -fx-border-width: 1; -fx-border-radius: 6; -fx-cursor: hand;"));
+        potvrdeBtn.setOnMouseExited(e -> potvrdeBtn.setStyle(
+                "-fx-background-color: white; -fx-text-fill: #1F2328; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-cursor: hand;"));
+        potvrdeBtn.setOnAction(e -> generatePotvrde());
+
         Button xmlBtn = new Button("Export XML");
-        xmlBtn.setStyle("-fx-background-color: #9A6700; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-cursor: hand;");
-        xmlBtn.setOnMouseEntered(e -> xmlBtn.setStyle("-fx-background-color: #7C5300; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-cursor: hand;"));
-        xmlBtn.setOnMouseExited(e -> xmlBtn.setStyle("-fx-background-color: #9A6700; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-cursor: hand;"));
+        xmlBtn.setStyle(
+                "-fx-background-color: #9A6700; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-cursor: hand;");
+        xmlBtn.setOnMouseEntered(e -> xmlBtn.setStyle(
+                "-fx-background-color: #7C5300; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-cursor: hand;"));
+        xmlBtn.setOnMouseExited(e -> xmlBtn.setStyle(
+                "-fx-background-color: #9A6700; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-cursor: hand;"));
         xmlBtn.setOnAction(e -> exportXml());
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
         Button dodajPrimaocaBtn = new Button("+ Dodaj primaoca");
-        dodajPrimaocaBtn.setStyle("-fx-background-color: white; -fx-text-fill: #0969DA; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-border-color: #0969DA; -fx-border-width: 1; -fx-border-radius: 6; -fx-cursor: hand;");
-        dodajPrimaocaBtn.setOnMouseEntered(e -> dodajPrimaocaBtn.setStyle("-fx-background-color: #DDF4FF; -fx-text-fill: #0969DA; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-border-color: #0969DA; -fx-border-width: 1; -fx-border-radius: 6; -fx-cursor: hand;"));
-        dodajPrimaocaBtn.setOnMouseExited(e -> dodajPrimaocaBtn.setStyle("-fx-background-color: white; -fx-text-fill: #0969DA; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-border-color: #0969DA; -fx-border-width: 1; -fx-border-radius: 6; -fx-cursor: hand;"));
+        dodajPrimaocaBtn.setStyle(
+                "-fx-background-color: white; -fx-text-fill: #0969DA; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-border-color: #0969DA; -fx-border-width: 1; -fx-border-radius: 6; -fx-cursor: hand;");
+        dodajPrimaocaBtn.setOnMouseEntered(e -> dodajPrimaocaBtn.setStyle(
+                "-fx-background-color: #DDF4FF; -fx-text-fill: #0969DA; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-border-color: #0969DA; -fx-border-width: 1; -fx-border-radius: 6; -fx-cursor: hand;"));
+        dodajPrimaocaBtn.setOnMouseExited(e -> dodajPrimaocaBtn.setStyle(
+                "-fx-background-color: white; -fx-text-fill: #0969DA; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-border-color: #0969DA; -fx-border-width: 1; -fx-border-radius: 6; -fx-cursor: hand;"));
         dodajPrimaocaBtn.setOnAction(e -> openDodajPrimaoca());
 
         Button newObracunBtn = new Button("Novi obračun");
-        newObracunBtn.setStyle("-fx-background-color: #0969DA; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-cursor: hand;");
-        newObracunBtn.setOnMouseEntered(e -> newObracunBtn.setStyle("-fx-background-color: #0550AE; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-cursor: hand;"));
-        newObracunBtn.setOnMouseExited(e -> newObracunBtn.setStyle("-fx-background-color: #0969DA; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-cursor: hand;"));
+        newObracunBtn.setStyle(
+                "-fx-background-color: #0969DA; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-cursor: hand;");
+        newObracunBtn.setOnMouseEntered(e -> newObracunBtn.setStyle(
+                "-fx-background-color: #0550AE; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-cursor: hand;"));
+        newObracunBtn.setOnMouseExited(e -> newObracunBtn.setStyle(
+                "-fx-background-color: #0969DA; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-cursor: hand;"));
         newObracunBtn.setOnAction(e -> openNoviObracun());
 
         Button closeBtn = new Button("Zatvori");
-        closeBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #CF222E; -fx-font-weight: bold; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-cursor: hand;");
-        closeBtn.setOnMouseEntered(e -> closeBtn.setStyle("-fx-background-color: #FFEBE9; -fx-text-fill: #CF222E; -fx-font-weight: bold; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-cursor: hand;"));
-        closeBtn.setOnMouseExited(e -> closeBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #CF222E; -fx-font-weight: bold; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-cursor: hand;"));
+        closeBtn.setStyle(
+                "-fx-background-color: transparent; -fx-text-fill: #CF222E; -fx-font-weight: bold; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-cursor: hand; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6;");
+        closeBtn.setOnMouseEntered(e -> closeBtn.setStyle(
+                "-fx-background-color: #FFEBE9; -fx-text-fill: #CF222E; -fx-font-weight: bold; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-cursor: hand; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6;"));
+        closeBtn.setOnMouseExited(e -> closeBtn.setStyle(
+                "-fx-background-color: transparent; -fx-text-fill: #CF222E; -fx-font-weight: bold; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-cursor: hand; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6;"));
         closeBtn.setOnAction(e -> AppLayout.showWelcome());
 
         buttonsBox.getChildren().addAll(
-                autoObradaBtn, izvestajPojedinacniBtn, xmlBtn, spacer, dodajPrimaocaBtn, newObracunBtn, closeBtn
-        );
+                autoObradaBtn, izvestajPojedinacniBtn, potvrdeBtn, xmlBtn, spacer, dodajPrimaocaBtn, newObracunBtn, closeBtn);
 
         footer.getChildren().addAll(sumeBox, new Separator(), buttonsBox);
         return footer;
@@ -476,7 +583,8 @@ public class ObracuniScreen {
     }
 
     private String getCurrentFilterVpz() {
-        if (vrstaIsplateCombo == null) return null;
+        if (vrstaIsplateCombo == null)
+            return null;
         Object val = vrstaIsplateCombo.getValue();
         if (val instanceof VrstaPrihoda vp) {
             return vp.getVpz() != null ? vp.getVpz().trim() : null;
@@ -485,7 +593,8 @@ public class ObracuniScreen {
     }
 
     private void applyFilterVrstaIsplate() {
-        if (filteredDefinicije == null) return;
+        if (filteredDefinicije == null)
+            return;
 
         String filterVpz = getCurrentFilterVpz();
         refreshObracunSvp3Map();
@@ -497,7 +606,8 @@ public class ObracuniScreen {
         } else {
             final String targetVpz = filterVpz;
             filteredDefinicije.setPredicate(def -> {
-                if (def == null || def.getIdObracun() == null) return false;
+                if (def == null || def.getIdObracun() == null)
+                    return false;
                 Set<String> svpSet = obracunSvp3Map.get(def.getIdObracun());
                 if (svpSet != null && svpSet.contains(targetVpz)) {
                     return true;
@@ -530,17 +640,20 @@ public class ObracuniScreen {
     }
 
     private void applyTableFilter(String filterVpz) {
-        if (filteredObracuni == null) return;
+        if (filteredObracuni == null)
+            return;
         if (filterVpz == null || filterVpz.isEmpty()) {
             filteredObracuni.setPredicate(p -> true);
         } else {
-            filteredObracuni.setPredicate(o -> o != null && filterVpz.equals(o.getSvp3() != null ? o.getSvp3().trim() : null));
+            filteredObracuni
+                    .setPredicate(o -> o != null && filterVpz.equals(o.getSvp3() != null ? o.getSvp3().trim() : null));
         }
         updateSume();
     }
 
     private void loadObracuniForDefinicija(ObracunDefinicija selected) {
-        if (selected == null) return;
+        if (selected == null)
+            return;
 
         obracuniData = FXCollections.observableArrayList();
 
@@ -575,14 +688,84 @@ public class ObracuniScreen {
 
         if (items != null) {
             for (Obracun o : items) {
-                if (o.getNeto() != null) sumaNeto = sumaNeto.add(o.getNeto());
-                if (o.getBruto() != null) sumaBruto = sumaBruto.add(o.getBruto());
+                if (o.getNeto() != null)
+                    sumaNeto = sumaNeto.add(o.getNeto());
+                if (o.getBruto() != null)
+                    sumaBruto = sumaBruto.add(o.getBruto());
             }
         }
 
         countLabel.setText(count + " stavki");
-        sumaNetoLabel.setText(String.format("NETO: %,.2f RSD", sumaNeto));
-        sumaBrutoLabel.setText(String.format("BRUTO: %,.2f RSD", sumaBruto));
+        sumaNetoLabel.setText("NETO: " + NumberFormats.money(sumaNeto) + " RSD");
+        sumaBrutoLabel.setText("BRUTO: " + NumberFormats.money(sumaBruto) + " RSD");
+    }
+
+    /**
+     * Vrsta prihoda (SVP-3) po defaultu: filter u obračunu, a ako nije izabran OVP
+     * definicije.
+     */
+    private String defaultSvp3() {
+        String filter = getCurrentFilterVpz();
+        if (filter != null)
+            return filter;
+        ObracunDefinicija def = getSelectedDefinicija();
+        return def != null && def.getOvp() != null ? String.valueOf(def.getOvp()) : null;
+    }
+
+    /**
+     * Računa bruto i ostale vrednosti iz NETO prema stopama za vrstu prihoda
+     * (SVP-3).
+     * 
+     * @return rezultat obračuna ili null ako nema NETO, SVP-3 ili stopa za tu vrstu
+     *         prihoda
+     */
+    private Obracun izracunajStavku(BigDecimal neto, String svp2, String svp3, BigDecimal procenat) {
+        if (neto == null || svp3 == null)
+            return null;
+        try {
+            Connection conn = DatabaseConnection.getInstance().getMainConnection();
+            ObracunStopeDao stopeDao = new ObracunStopeDao();
+            ObracunDefinicija def = getSelectedDefinicija();
+            String tip = svp3.trim();
+            Optional<ObracunStope> stope = Optional.empty();
+            if (def != null && def.getLnkPromenaStope() != null) {
+                stope = stopeDao.findByTipAndPromenaStope(conn, tip, def.getLnkPromenaStope());
+            }
+            if (stope.isEmpty()) {
+                stope = stopeDao.findLatestByTip(conn, tip);
+            }
+            if (stope.isEmpty())
+                return null;
+            return new ObracunService().izracunaj(neto, stope.get(),
+                    procenat != null ? procenat : BigDecimal.ONE, svp2, tip);
+        } catch (Exception e) {
+            System.err.println("Greška pri obračunu: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /** Preračunava stavku (iz NETO, SVP-2 i SVP-3) i upisuje rezultat u nju. */
+    private boolean primeniObracun(Obracun o) {
+        Obracun c = izracunajStavku(o.getNeto(), o.getSvp2(), o.getSvp3(), o.getProcenat());
+        if (c == null)
+            return false;
+        o.setBruto(c.getBruto());
+        o.setNormTroskovi(c.getNormTroskovi());
+        o.setOsnovicaPorez(c.getOsnovicaPorez());
+        o.setOsnovicaDoprinosi(c.getOsnovicaDoprinosi());
+        o.setPorez(c.getPorez());
+        o.setPoreskoOslobodjenje(c.getPoreskoOslobodjenje());
+        o.setPio(c.getPio());
+        o.setZdr(c.getZdr());
+        o.setNez(c.getNez());
+        o.setpPio(c.getpPio());
+        o.setpZdr(c.getpZdr());
+        o.setpNez(c.getpNez());
+        o.setzPio(c.getzPio());
+        o.setzZdr(c.getzZdr());
+        o.setzNez(c.getzNez());
+        o.setObracunato(c.getObracunato());
+        return true;
     }
 
     private void runAutomatskaObrada() {
@@ -603,11 +786,16 @@ public class ObracuniScreen {
             int processed = 0;
             for (Obracun o : obracuniData) {
                 if (o.getNeto() != null && o.getNeto().compareTo(BigDecimal.ZERO) > 0) {
-                    // Izračunaj bruto (pojednostavljena logika)
-                    // U pravoj implementaciji bi koristili ObracunService sa pravim stopama
-                    BigDecimal koeficijent = new BigDecimal("1.45"); // Primer koeficijenta
-                    o.setBruto(o.getNeto().multiply(koeficijent).setScale(2, java.math.RoundingMode.HALF_UP));
-                    processed++;
+                    if (o.getSvp3() == null)
+                        o.setSvp3(defaultSvp3());
+                    if (primeniObracun(o)) {
+                        try (Connection conn = DatabaseConnection.getInstance().getMainConnection()) {
+                            new ObracunDao().update(conn, o);
+                            processed++;
+                        } catch (Exception ex) {
+                            showError("Greška", "Snimanje stavke nije uspelo: " + ex.getMessage());
+                        }
+                    }
                 }
             }
             tableView.refresh();
@@ -616,12 +804,14 @@ public class ObracuniScreen {
         }
     }
 
-    private void editObracunStavka(Obracun obracun) {
+    /** @return true ako je stavka snimljena u bazu */
+    private boolean editObracunStavka(Obracun obracun) {
         Dialog<Obracun> dialog = new Dialog<>();
         dialog.setTitle("Pojedinačna obrada");
 
         ButtonType saveButtonType = new ButtonType("Snimi", ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(saveButtonType, ButtonType.CANCEL);
+        ButtonType potvrdaButtonType = new ButtonType("Potvrda", ButtonBar.ButtonData.LEFT);
+        dialog.getDialogPane().getButtonTypes().addAll(potvrdaButtonType, saveButtonType, ButtonType.CANCEL);
 
         GridPane grid = new GridPane();
         grid.setHgap(10);
@@ -633,22 +823,23 @@ public class ObracuniScreen {
 
         // Primalac — label + dugme za promenu
         Label primalacLabel = new Label(obracun.getPrezime() + " " + obracun.getIme());
-        primalacLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
+        primalacLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
         Button promeniPrimaocaBtn = new Button("Promeni...");
-        promeniPrimaocaBtn.setStyle("-fx-background-color: #F6F8FA; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 5; -fx-cursor: hand;");
+        promeniPrimaocaBtn.setStyle(
+                "-fx-background-color: #F6F8FA; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 5; -fx-cursor: hand;");
         HBox primalacBox = new HBox(8, primalacLabel, promeniPrimaocaBtn);
         primalacBox.setAlignment(Pos.CENTER_LEFT);
 
         // NETO
         TextField netoField = new TextField();
-        netoField.setText(obracun.getNeto() != null ? obracun.getNeto().toPlainString() : "0");
+        netoField.setText(obracun.getNeto() != null ? obracun.getNeto().toPlainString().replace('.', ',') : "0");
         netoField.setStyle(fieldStyle);
         netoField.setPrefWidth(180);
 
         // BRUTO (read-only, calculated)
-        Label brutoLabel = new Label(obracun.getBruto() != null ?
-                String.format("%,.2f", obracun.getBruto()) : "0,00");
-        brutoLabel.setStyle("-fx-background-color: #D4EFD9; -fx-padding: 5 10; -fx-border-color: #A8D5B5; -fx-border-width: 1; -fx-border-radius: 4; -fx-text-fill: #1A7F37; -fx-font-weight: bold; -fx-min-width: 180;");
+        Label brutoLabel = new Label(obracun.getBruto() != null ? NumberFormats.money(obracun.getBruto()) : "0,00");
+        brutoLabel.setStyle(
+                "-fx-background-color: #D4EFD9; -fx-padding: 5 10; -fx-border-color: #A8D5B5; -fx-border-width: 1; -fx-border-radius: 4; -fx-text-fill: #1A7F37; -fx-font-weight: bold; -fx-min-width: 180;");
 
         // Vrsta primaoca ComboBox
         ComboBox<VrstaPrimaoca> vrstaPrimaocaCombo = new ComboBox<>();
@@ -656,13 +847,15 @@ public class ObracuniScreen {
         vrstaPrimaocaCombo.setPrefWidth(280);
         vrstaPrimaocaCombo.setStyle("-fx-font-size: 13px;");
         vrstaPrimaocaCombo.setCellFactory(lv -> new ListCell<>() {
-            @Override protected void updateItem(VrstaPrimaoca item, boolean empty) {
+            @Override
+            protected void updateItem(VrstaPrimaoca item, boolean empty) {
                 super.updateItem(item, empty);
                 setText(empty || item == null ? null : item.getDisplayName());
             }
         });
         vrstaPrimaocaCombo.setButtonCell(new ListCell<>() {
-            @Override protected void updateItem(VrstaPrimaoca item, boolean empty) {
+            @Override
+            protected void updateItem(VrstaPrimaoca item, boolean empty) {
                 super.updateItem(item, empty);
                 setText(empty || item == null ? null : item.getDisplayName());
             }
@@ -683,21 +876,25 @@ public class ObracuniScreen {
         vrstaPrihodaCombo.setPrefWidth(280);
         vrstaPrihodaCombo.setStyle("-fx-font-size: 13px;");
         vrstaPrihodaCombo.setCellFactory(lv -> new ListCell<>() {
-            @Override protected void updateItem(VrstaPrihoda item, boolean empty) {
+            @Override
+            protected void updateItem(VrstaPrihoda item, boolean empty) {
                 super.updateItem(item, empty);
                 setText(empty || item == null ? null : item.getVpz() + " - " + item.getNaziv());
             }
         });
         vrstaPrihodaCombo.setButtonCell(new ListCell<>() {
-            @Override protected void updateItem(VrstaPrihoda item, boolean empty) {
+            @Override
+            protected void updateItem(VrstaPrihoda item, boolean empty) {
                 super.updateItem(item, empty);
                 setText(empty || item == null ? null : item.getVpz() + " - " + item.getNaziv());
             }
         });
-        // Selektuj tekuću vrednost po svp3
-        if (obracun.getSvp3() != null) {
+        // Selektuj tekuću vrednost po svp3; ako nije postavljena, vrsta prihoda
+        // izabrana u obračunu
+        String svp3Default = obracun.getSvp3() != null ? obracun.getSvp3().trim() : defaultSvp3();
+        if (svp3Default != null) {
             for (VrstaPrihoda vp : svePrihodi) {
-                if (obracun.getSvp3().equals(vp.getVpz())) {
+                if (svp3Default.equals(vp.getVpz() != null ? vp.getVpz().trim() : null)) {
                     vrstaPrihodaCombo.setValue(vp);
                     break;
                 }
@@ -737,13 +934,18 @@ public class ObracuniScreen {
         Runnable recalc = () -> {
             try {
                 BigDecimal neto = new BigDecimal(netoField.getText().replace(",", "."));
-                BigDecimal bruto = neto.multiply(new BigDecimal("1.45"))
-                        .setScale(2, java.math.RoundingMode.HALF_UP);
-                brutoLabel.setText(String.format("%,.2f", bruto));
-            } catch (NumberFormatException ex) {
+                Obracun calc = izracunajStavku(neto,
+                        vrstaPrimaocaCombo.getValue() != null
+                                ? String.format("%02d", vrstaPrimaocaCombo.getValue().getId())
+                                : obracun.getSvp2(),
+                        vrstaPrihodaCombo.getValue() != null ? vrstaPrihodaCombo.getValue().getVpz() : null,
+                        obracun.getProcenat());
+                brutoLabel.setText(calc != null ? NumberFormats.money(calc.getBruto()) : "—");
+            } catch (Exception ex) {
                 brutoLabel.setText("0,00");
             }
         };
+        recalc.run();
 
         netoField.textProperty().addListener((obs, o, n) -> recalc.run());
         vrstaPrimaocaCombo.valueProperty().addListener((obs, o, n) -> recalc.run());
@@ -776,31 +978,94 @@ public class ObracuniScreen {
         dialog.getDialogPane().setContent(grid);
         dialog.setOnShown(e -> javafx.application.Platform.runLater(netoField::requestFocus));
 
+        // Potvrda: PDF za ovu stavku iz snimljenih podataka; dijalog ostaje otvoren.
+        // Dok ima neunetih izmena (ili stavka nije snimljena) taster je onemogućen.
+        Node potvrdaBtn = dialog.getDialogPane().lookupButton(potvrdaButtonType);
+        potvrdaBtn.setDisable(obracun.getIdPobracun() == null);
+        Runnable onChange = () -> potvrdaBtn.setDisable(true);
+        netoField.textProperty().addListener((obs, o, n) -> onChange.run());
+        vrstaPrimaocaCombo.valueProperty().addListener((obs, o, n) -> onChange.run());
+        vrstaPrihodaCombo.valueProperty().addListener((obs, o, n) -> onChange.run());
+        potvrdaBtn.addEventFilter(javafx.event.ActionEvent.ACTION, ev -> {
+            ev.consume();
+            prikaziPotvrde(List.of(obracun));
+        });
+
         dialog.setResultConverter(dialogButton -> {
             if (dialogButton == saveButtonType) {
-                try {
-                    BigDecimal neto = new BigDecimal(netoField.getText().replace(",", "."));
-                    obracun.setNeto(neto);
-                    obracun.setBruto(neto.multiply(new BigDecimal("1.45"))
-                            .setScale(2, java.math.RoundingMode.HALF_UP));
-                } catch (NumberFormatException e) {
-                    // ignoriši nevalidne unose
-                }
                 if (vrstaPrimaocaCombo.getValue() != null) {
                     obracun.setSvp2(String.format("%02d", vrstaPrimaocaCombo.getValue().getId()));
                 }
                 if (vrstaPrihodaCombo.getValue() != null) {
                     obracun.setSvp3(vrstaPrihodaCombo.getValue().getVpz());
                 }
+                try {
+                    BigDecimal neto = new BigDecimal(netoField.getText().replace(",", "."));
+                    obracun.setNeto(neto);
+                    if (!primeniObracun(obracun)) {
+                        obracun.setBruto(BigDecimal.ZERO);
+                    }
+                } catch (NumberFormatException e) {
+                    // ignoriši nevalidne unose
+                }
                 return obracun;
             }
             return null;
         });
 
-        dialog.showAndWait().ifPresent(r -> {
-            tableView.refresh();
-            applyFilterVrstaIsplate();
+        Optional<Obracun> res = dialog.showAndWait();
+        if (res.isEmpty())
+            return false;
+
+        try (Connection conn = DatabaseConnection.getInstance().getMainConnection()) {
+            ObracunDao dao = new ObracunDao();
+            if (obracun.getIdPobracun() == null) {
+                dao.save(conn, obracun);
+            }
+            dao.update(conn, obracun);
+            if (!conn.getAutoCommit()) conn.commit();
+        } catch (Exception ex) {
+            showError("Greška", "Snimanje stavke nije uspelo: " + ex.getMessage());
+            return false;
+        }
+        tableView.refresh();
+        applyFilterVrstaIsplate();
+        updateSume();
+        return true;
+    }
+
+    /** Otvara podatke primaoca stavke u modalnom prozoru (isti ekran kao u listi primalaca). */
+    private void openPodaciPrimaoca(Obracun stavka) {
+        if (stavka == null || stavka.getLnkZap() == null) {
+            showInfo("Info", "Stavka nema povezanog primaoca.");
+            return;
+        }
+        Primalac primalac;
+        try {
+            Connection conn = DatabaseConnection.getInstance().getMainConnection();
+            primalac = new PrimalacDao().findById(conn, stavka.getLnkZap()).orElse(null);
+        } catch (Exception e) {
+            showError("Greška", "Ne mogu učitati primaoca: " + e.getMessage());
+            return;
+        }
+        if (primalac == null) {
+            showInfo("Info", "Primalac nije pronađen u bazi.");
+            return;
+        }
+
+        PrimalacDetaljiScreen screen = new PrimalacDetaljiScreen(primalac);
+        javafx.stage.Stage stage = new javafx.stage.Stage();
+        stage.initOwner(HbsZaradeApp.getPrimaryStage());
+        stage.initModality(javafx.stage.Modality.WINDOW_MODAL);
+        stage.setTitle("Podaci primaoca");
+        stage.setScene(new javafx.scene.Scene(screen.getRoot(), 960, 680));
+        screen.setOnClose(stage::close);
+        stage.setOnCloseRequest(ev -> {
+            if (!screen.confirmLeave())
+                ev.consume();
         });
+        stage.showAndWait();
+        tableView.refresh();
     }
 
     /** Pomoćna metoda za dohvat čvora iz GridPane po koloni i redu. */
@@ -808,7 +1073,8 @@ public class ObracuniScreen {
         for (Node node : grid.getChildren()) {
             Integer c = GridPane.getColumnIndex(node);
             Integer r = GridPane.getRowIndex(node);
-            if ((c == null ? 0 : c) == col && (r == null ? 0 : r) == row) return node;
+            if ((c == null ? 0 : c) == col && (r == null ? 0 : r) == row)
+                return node;
         }
         return null;
     }
@@ -829,13 +1095,16 @@ public class ObracuniScreen {
         ObservableList<Primalac> svePrimaoci = FXCollections.observableArrayList();
         try {
             Connection conn = DatabaseConnection.getInstance().getMainConnection();
-            if (conn != null) svePrimaoci.addAll(new PrimalacDao().findAll(conn));
-        } catch (Exception e) { /* ignoriši */ }
+            if (conn != null)
+                svePrimaoci.addAll(new PrimalacDao().findAll(conn));
+        } catch (Exception e) {
+            /* ignoriši */ }
 
         FilteredList<Primalac> filteredPrimaoci = new FilteredList<>(svePrimaoci, p -> true);
         listView.setItems(filteredPrimaoci);
         listView.setCellFactory(lv -> new ListCell<>() {
-            @Override protected void updateItem(Primalac p, boolean empty) {
+            @Override
+            protected void updateItem(Primalac p, boolean empty) {
                 super.updateItem(p, empty);
                 setText(empty || p == null ? null : p.getPrezime() + " " + p.getIme() + " (" + p.getMb() + ")");
             }
@@ -846,7 +1115,8 @@ public class ObracuniScreen {
         searchField.textProperty().addListener((obs, o, n) -> {
             String lower = n == null ? "" : n.toLowerCase().trim();
             filteredPrimaoci.setPredicate(p -> {
-                if (lower.isEmpty()) return true;
+                if (lower.isEmpty())
+                    return true;
                 return (p.getPrezime() != null && p.getPrezime().toLowerCase().contains(lower))
                         || (p.getIme() != null && p.getIme().toLowerCase().contains(lower))
                         || (p.getMb() != null && p.getMb().contains(n.trim()));
@@ -911,7 +1181,8 @@ public class ObracuniScreen {
         searchField.textProperty().addListener((obs, o, n) -> {
             String lower = n == null ? "" : n.toLowerCase().trim();
             filteredPrimaoci.setPredicate(p -> {
-                if (lower.isEmpty()) return true;
+                if (lower.isEmpty())
+                    return true;
                 return (p.getPrezime() != null && p.getPrezime().toLowerCase().contains(lower))
                         || (p.getIme() != null && p.getIme().toLowerCase().contains(lower))
                         || (p.getMb() != null && p.getMb().contains(n.trim()));
@@ -936,6 +1207,11 @@ public class ObracuniScreen {
             novaStavka.setLnkZap(primalac.getIdZaposleni());
             novaStavka.setPrezime(primalac.getPrezime());
             novaStavka.setIme(primalac.getIme());
+            novaStavka.setIdentifikatorPrimaoca(primalac.getMb());
+            novaStavka.setOznakaPrebivalista(primalac.getOznakaPrebivalista());
+            if (primalac.getVrstaIdentifikatoraPrimaoca() != null) {
+                novaStavka.setVrstaIdentifikatoraPrimaoca(String.valueOf(primalac.getVrstaIdentifikatoraPrimaoca()));
+            }
             novaStavka.setNeto(BigDecimal.ZERO);
             novaStavka.setBruto(BigDecimal.ZERO);
             if (primalac.getVrstaPrimaocaId() != null) {
@@ -950,7 +1226,11 @@ public class ObracuniScreen {
             tableView.getSelectionModel().select(novaStavka);
             updateSume();
             // Odmah otvori editovanje za unos NETO iznosa
-            editObracunStavka(novaStavka);
+            if (!editObracunStavka(novaStavka)) {
+                // Otkazano ili neuspelo snimanje: ne ostavljaj nesnimljenu stavku u tabeli
+                obracuniData.remove(novaStavka);
+                updateSume();
+            }
         }
     }
 
@@ -998,9 +1278,7 @@ public class ObracuniScreen {
                 java.io.File tempFile = java.io.File.createTempFile("izvestaj_", ".pdf");
                 tempFile.deleteOnExit();
                 PdfReporter.generatePojedinacan(tempFile, selected, selectedDef, loadPoslodavac());
-                showDocPreview(tempFile,
-                        "izvestaj_" + (selected.getPrezime() != null ? selected.getPrezime() : "primalac") + ".pdf",
-                        AppSettingsDao.KEY_OBRACUN_PDF_PATH);
+                openPdfPreview(tempFile);
             } catch (Exception e) {
                 showError("Greška", "Greška pri generisanju PDF: " + e.getMessage());
             }
@@ -1009,20 +1287,65 @@ public class ObracuniScreen {
                 java.io.File tempFile = java.io.File.createTempFile("zbirni_", ".pdf");
                 tempFile.deleteOnExit();
                 PdfReporter.generateZbirni(tempFile, selectedDef, obracuniData, loadPoslodavac());
-                showDocPreview(tempFile,
-                        "zbirni_obracun_" + selectedDef.getIdObracun() + ".pdf",
-                        AppSettingsDao.KEY_OBRACUN_PDF_PATH);
+                openPdfPreview(tempFile);
             } catch (Exception e) {
                 showError("Greška", "Greška pri generisanju PDF: " + e.getMessage());
             }
         }
     }
 
+    private void generatePotvrde() {
+        ObracunDefinicija selectedDef = getSelectedDefinicija();
+        if (selectedDef == null) {
+            showInfo("Info", "Izaberite obračun iz liste.");
+            return;
+        }
+        if (obracuniData == null || obracuniData.isEmpty()) {
+            showInfo("Info", "Nema stavki za potvrde.");
+            return;
+        }
+        prikaziPotvrde(obracuniData);
+    }
+
+    /** Generiše PDF potvrda (jedna strana po stavci) i odmah ga otvara u pregledu. */
+    private void prikaziPotvrde(List<Obracun> stavke) {
+        try {
+            java.util.Map<String, String> nazivPoVpz = new java.util.HashMap<>();
+            for (VrstaPrihoda vp : svePrihodi)
+                nazivPoVpz.put(vp.getVpz(), vp.getNaziv());
+
+            java.util.Map<Integer, Primalac> primaoci = new java.util.HashMap<>();
+            Connection conn = DatabaseConnection.getInstance().getMainConnection();
+            if (conn != null) {
+                // Naslov iz IzvestajPrihodi (veza OVP3 = SVP-3) ima prednost nad nazivom iz šifarnika
+                nazivPoVpz.putAll(new IzvestajPrihodiDao().findNaslovPoOvp3(conn));
+                for (Primalac p : new PrimalacDao().findAll(conn))
+                    primaoci.put(p.getIdZaposleni(), p);
+            }
+
+            java.io.File tempFile = java.io.File.createTempFile("potvrde_", ".pdf");
+            tempFile.deleteOnExit();
+            PdfReporter.generatePotvrdeObracuna(tempFile, stavke, nazivPoVpz, primaoci, loadPoslodavac());
+            openPdfPreview(tempFile);
+        } catch (Exception e) {
+            showError("Greška", "Greška pri generisanju PDF: " + e.getMessage());
+        }
+    }
+
+    /** Odmah otvara PDF u podrazumevanom pregledaču (bez dijaloga za izbor akcije). */
+    private void openPdfPreview(java.io.File pdf) {
+        try {
+            java.awt.Desktop.getDesktop().open(pdf);
+        } catch (Exception e) {
+            showError("Greška", "Ne mogu otvoriti pregled: " + e.getMessage());
+        }
+    }
+
     private void showDocPreview(java.io.File tempPdf, String defaultFileName, String settingsKey) {
         ButtonType previewType = new ButtonType("Otvori pregled");
-        ButtonType printType   = new ButtonType("Štampaj");
-        ButtonType saveType    = new ButtonType("Sačuvaj PDF...");
-        ButtonType cancelType  = new ButtonType("Otkaži", ButtonBar.ButtonData.CANCEL_CLOSE);
+        ButtonType printType = new ButtonType("Štampaj");
+        ButtonType saveType = new ButtonType("Sačuvaj PDF...");
+        ButtonType cancelType = new ButtonType("Otkaži", ButtonBar.ButtonData.CANCEL_CLOSE);
 
         Alert dialog = new Alert(Alert.AlertType.NONE);
         dialog.setTitle("Pregled dokumenta");
@@ -1039,7 +1362,8 @@ public class ObracuniScreen {
                     FileChooser fc = new FileChooser();
                     fc.setTitle("Sačuvaj PDF");
                     java.io.File dir = AppSettingsDao.getExportDir(settingsKey);
-                    if (dir != null) fc.setInitialDirectory(dir);
+                    if (dir != null)
+                        fc.setInitialDirectory(dir);
                     fc.setInitialFileName(defaultFileName);
                     fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("PDF fajlovi", "*.pdf"));
                     java.io.File dest = fc.showSaveDialog(HbsZaradeApp.getPrimaryStage());
@@ -1062,7 +1386,8 @@ public class ObracuniScreen {
             if (conn != null) {
                 PoslodavacDao dao = new PoslodavacDao();
                 List<Poslodavac> lista = dao.findAll(conn);
-                if (!lista.isEmpty()) return lista.get(0);
+                if (!lista.isEmpty())
+                    return lista.get(0);
             }
         } catch (Exception e) {
             // ne blokira operaciju
@@ -1093,6 +1418,20 @@ public class ObracuniScreen {
             return;
         }
 
+        // Ako je u Podešavanjima zadat folder za XML export, fajl se kreira automatski bez pregleda
+        java.io.File xmlDir = AppSettingsDao.getExportDir(AppSettingsDao.KEY_XML_EXPORT_PATH);
+        if (xmlDir != null) {
+            java.io.File file = new java.io.File(xmlDir, "obracun_" + selectedDef.getIdObracun() + ".xml");
+            try {
+                XmlExporter.exportToFile(file, selectedDef, obracuniData, poslodavac);
+            } catch (Exception e) {
+                showError("Greška", "Greška pri čuvanju XML: " + e.getMessage());
+                return;
+            }
+            showXmlCreated(file);
+            return;
+        }
+
         // Prikaži preview
         Alert preview = new Alert(Alert.AlertType.CONFIRMATION);
         preview.setTitle("XML Export — PPP-PO");
@@ -1108,15 +1447,12 @@ public class ObracuniScreen {
         preview.getDialogPane().setContent(textArea);
         preview.getDialogPane().getButtonTypes().setAll(
                 new ButtonType("Sačuvaj XML", ButtonBar.ButtonData.OK_DONE),
-                ButtonType.CANCEL
-        );
+                ButtonType.CANCEL);
 
         Optional<ButtonType> result = preview.showAndWait();
         if (result.isPresent() && result.get().getButtonData() == ButtonBar.ButtonData.OK_DONE) {
             FileChooser fileChooser = new FileChooser();
             fileChooser.setTitle("Sačuvaj XML");
-            java.io.File xmlDir = AppSettingsDao.getExportDir(AppSettingsDao.KEY_XML_EXPORT_PATH);
-            if (xmlDir != null) fileChooser.setInitialDirectory(xmlDir);
             fileChooser.setInitialFileName("obracun_" + selectedDef.getIdObracun() + ".xml");
             fileChooser.getExtensionFilters().add(
                     new FileChooser.ExtensionFilter("XML fajlovi", "*.xml"));
@@ -1130,6 +1466,29 @@ public class ObracuniScreen {
                 }
             }
         }
+    }
+
+    /** Poruka da je XML kreiran, sa opcijom da se otvori folder i selektuje fajl. */
+    private void showXmlCreated(java.io.File file) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("XML Export");
+        alert.setHeaderText("XML je kreiran");
+        alert.setContentText(file.getAbsolutePath());
+        ButtonType otvoriBtn = new ButtonType("Otvori folder");
+        alert.getButtonTypes().setAll(otvoriBtn, ButtonType.OK);
+        alert.showAndWait().ifPresent(btn -> {
+            if (btn == otvoriBtn) {
+                try {
+                    if (System.getProperty("os.name", "").toLowerCase().contains("win")) {
+                        new ProcessBuilder("explorer.exe", "/select," + file.getAbsolutePath()).start();
+                    } else {
+                        java.awt.Desktop.getDesktop().open(file.getParentFile());
+                    }
+                } catch (Exception ex) {
+                    showError("Greška", "Ne mogu otvoriti folder: " + ex.getMessage());
+                }
+            }
+        });
     }
 
     private void deleteObracunDefinicija() {
@@ -1179,7 +1538,9 @@ public class ObracuniScreen {
         alert.getButtonTypes().setAll(otvoriBtn, ButtonType.OK);
         alert.showAndWait().ifPresent(btn -> {
             if (btn == otvoriBtn) {
-                try { java.awt.Desktop.getDesktop().open(file); } catch (Exception ex) {
+                try {
+                    java.awt.Desktop.getDesktop().open(file);
+                } catch (Exception ex) {
                     showError("Greška", "Ne mogu otvoriti fajl: " + ex.getMessage());
                 }
             }

@@ -120,6 +120,7 @@ public class LoginScreen {
         langCombo.getItems().addAll("Latinica", "Ćirilica", "English", "Deutsch");
         langCombo.setValue("Latinica");
         langCombo.setMaxWidth(Double.MAX_VALUE);
+        ComboBoxHelper.openOnSpace(langCombo);
         langCombo.setStyle("-fx-background-color: white; -fx-font-size: 13px; " +
                 "-fx-border-color: #D0D7DE; -fx-border-radius: 6;");
 
@@ -129,6 +130,7 @@ public class LoginScreen {
 
         userCombo = new ComboBox<>();
         userCombo.setMaxWidth(Double.MAX_VALUE);
+        ComboBoxHelper.openOnSpace(userCombo);
         userCombo.setStyle("-fx-background-color: white; -fx-font-size: 13px; " +
                 "-fx-border-color: #D0D7DE; -fx-border-radius: 6;");
 

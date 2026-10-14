@@ -116,6 +116,18 @@ public class Obracun {
         return b.add(getUkupnoDoprinosiPoslodavac());
     }
 
+    /**
+     * Postavlja SVP kao spoj SVP-1 .. SVP-5 (SVP = SVP1 & SVP2 & SVP3 & SVP4 & SVP5).
+     * Poziva se pre snimanja u bazu.
+     */
+    public void rebuildSvp() {
+        StringBuilder sb = new StringBuilder();
+        for (String part : new String[]{svp1, svp2, svp3, svp4, svp5}) {
+            if (part != null) sb.append(part.trim());
+        }
+        this.svp = sb.length() > 0 ? sb.toString() : null;
+    }
+
     // === GETTERI I SETTERI ===
 
     public Integer getIdPobracun() {

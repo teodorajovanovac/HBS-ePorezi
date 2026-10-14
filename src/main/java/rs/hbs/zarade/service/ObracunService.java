@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
  * - 405: Autorski honorar - samo porez, bez doprinosa
  * - 305, 601, 605: Ugovori o delu - normirani troškovi + PIO + ZDR
  *
- * Pravilo zaokruživanja: Round() na cele dinare nakon obračuna.
+ * Pravilo zaokruživanja: na 2 decimale nakon obračuna.
  */
 public class ObracunService {
 
@@ -308,7 +308,7 @@ public class ObracunService {
     }
 
     /**
-     * Zaokružuje sve novčane vrednosti na cele dinare.
+     * Zaokružuje sve novčane vrednosti na 2 decimale.
      * Iz OBRACUN_ZAOKRUZIVANJE upita.
      */
     private void zaokruzi(Obracun o) {
@@ -369,10 +369,10 @@ public class ObracunService {
     }
 
     /**
-     * Zaokružuje na cele dinare, null-safe.
+     * Zaokružuje na 2 decimale, null-safe.
      */
     private BigDecimal round(BigDecimal value) {
-        return value != null ? value.setScale(0, ROUNDING) : null;
+        return value != null ? value.setScale(2, ROUNDING) : null;
     }
 
     /**

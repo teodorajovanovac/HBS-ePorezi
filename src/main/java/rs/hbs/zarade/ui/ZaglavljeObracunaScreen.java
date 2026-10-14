@@ -11,8 +11,10 @@ import rs.hbs.zarade.HbsZaradeApp;
 import rs.hbs.zarade.db.DatabaseConnection;
 import rs.hbs.zarade.db.ObracunDefinicijaDao;
 import rs.hbs.zarade.db.PoslodavacDao;
+import rs.hbs.zarade.db.VrstaPrihodaDao;
 import rs.hbs.zarade.domain.ObracunDefinicija;
 import rs.hbs.zarade.domain.Poslodavac;
+import rs.hbs.zarade.domain.VrstaPrihoda;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -47,7 +49,7 @@ public class ZaglavljeObracunaScreen {
     // Form fields
     private TextField sifraField;
     private TextField nazivField;
-    private ComboBox<String> tipIsplateCombo;
+    private ComboBox<VrstaPrihoda> tipIsplateCombo;
     private TextField mesecField;
     private DatePicker datumObracunaPicker;
     private DatePicker datumSlanjaPicker;
@@ -61,10 +63,11 @@ public class ZaglavljeObracunaScreen {
         this.obracunDef = obracunDef != null ? obracunDef : new ObracunDefinicija();
         this.createMode = createMode;
         createUI();
+        // Poslodavci moraju biti učitani pre popunjavanja polja, inače se poslodavac ne selektuje
+        loadPoslodavci();
         if (!createMode) {
             populateFields();
         }
-        loadPoslodavci();
         // Zaštita od gubitka izmena pri sidebar navigaciji
         root.setUserData((AppLayout.DirtyCheckable) this::confirmLeave);
     }
@@ -112,6 +115,16 @@ public class ZaglavljeObracunaScreen {
         // Footer
         HBox footer = createFooter();
         root.setBottom(footer);
+
+        // Novi obračun: fokus odmah na naziv obračuna
+        if (createMode) {
+            root.sceneProperty().addListener((obs, oldScene, newScene) -> {
+                if (newScene != null) {
+                    javafx.application.Platform.runLater(() -> nazivField.requestFocus());
+                }
+            });
+            javafx.application.Platform.runLater(() -> nazivField.requestFocus());
+        }
     }
 
     private HBox createHeader() {
@@ -158,15 +171,7 @@ public class ZaglavljeObracunaScreen {
 
         // Tip isplate (OVP)
         tipIsplateCombo = new ComboBox<>();
-        tipIsplateCombo.getItems().addAll(
-                "101 - Zarada",
-                "102 - Zarada - bolovanje",
-                "199 - Ostale zarade",
-                "305 - Ugovor o privremenim poslovima",
-                "405 - Autorski honorar",
-                "601 - Ugovor o delu",
-                "605 - Dopunski rad"
-        );
+        loadVrstePrihoda();
         tipIsplateCombo.setMaxWidth(Double.MAX_VALUE);
         tipIsplateCombo.setStyle("-fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-radius: 6;");
 
@@ -183,6 +188,8 @@ public class ZaglavljeObracunaScreen {
         // Datum slanja
         datumSlanjaPicker = new DatePicker();
         datumSlanjaPicker.setMaxWidth(Double.MAX_VALUE);
+        rs.hbs.zarade.util.DateFormats.install(datumObracunaPicker);
+        rs.hbs.zarade.util.DateFormats.install(datumSlanjaPicker);
 
         // Oznaka (Konačna/Akontacija)
         oznakaKonacnaCombo = new ComboBox<>();
@@ -212,15 +219,6 @@ public class ZaglavljeObracunaScreen {
         ComboBoxHelper.makeSearchable(oznakaKonacnaCombo);
         ComboBoxHelper.makeSearchable(poslodavacCombo);
 
-        // Info box
-        Label infoLabel = new Label(
-                "Napomena: Nakon izmena u zaglavlju potrebno je ažurirati XML podatke " +
-                        "klikom na dugme 'Ažuriraj XML'."
-        );
-        infoLabel.setWrapText(true);
-        infoLabel.setStyle("-fx-background-color: #EEF2F7; -fx-padding: 10 14; -fx-text-fill: #57606A; " +
-                "-fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-font-size: 12px;");
-
         // Dodaj polja u formu
         form.getChildren().addAll(
                 createFieldRow("Šifra:", sifraField),
@@ -237,10 +235,6 @@ public class ZaglavljeObracunaScreen {
                 new Separator(),
                 createFieldRow("Poslodavac: *", poslodavacCombo)
         );
-        // XML napomena samo u edit modu
-        if (!createMode) {
-            form.getChildren().addAll(new Separator(), infoLabel);
-        }
 
         // Dirty tracking
         nazivField.textProperty().addListener((obs, o, n) -> markDirty());
@@ -282,19 +276,13 @@ public class ZaglavljeObracunaScreen {
         footer.setPadding(new Insets(10, 20, 10, 20));
         footer.setAlignment(Pos.CENTER_LEFT);
 
-        Button azurirajXmlBtn = new Button("Ažuriraj XML");
-        azurirajXmlBtn.setStyle("-fx-background-color: #9A6700; -fx-text-fill: white; -fx-background-radius: 6; -fx-padding: 7 16; -fx-font-size: 13px; -fx-cursor: hand;");
-        azurirajXmlBtn.setOnMouseEntered(e -> azurirajXmlBtn.setStyle("-fx-background-color: #7C5300; -fx-text-fill: white; -fx-background-radius: 6; -fx-padding: 7 16; -fx-font-size: 13px; -fx-cursor: hand;"));
-        azurirajXmlBtn.setOnMouseExited(e -> azurirajXmlBtn.setStyle("-fx-background-color: #9A6700; -fx-text-fill: white; -fx-background-radius: 6; -fx-padding: 7 16; -fx-font-size: 13px; -fx-cursor: hand;"));
-        azurirajXmlBtn.setOnAction(e -> azurirajXml());
-
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
         Button closeBtn = new Button("Zatvori");
-        closeBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #CF222E; -fx-font-weight: bold; -fx-font-size: 13px; -fx-padding: 7 16; -fx-background-radius: 6; -fx-cursor: hand;");
-        closeBtn.setOnMouseEntered(e -> closeBtn.setStyle("-fx-background-color: #FFEBE9; -fx-text-fill: #CF222E; -fx-font-weight: bold; -fx-font-size: 13px; -fx-padding: 7 16; -fx-background-radius: 6; -fx-cursor: hand;"));
-        closeBtn.setOnMouseExited(e -> closeBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #CF222E; -fx-font-weight: bold; -fx-font-size: 13px; -fx-padding: 7 16; -fx-background-radius: 6; -fx-cursor: hand;"));
+        closeBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #CF222E; -fx-font-weight: bold; -fx-font-size: 13px; -fx-padding: 7 16; -fx-background-radius: 6; -fx-cursor: hand; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6;");
+        closeBtn.setOnMouseEntered(e -> closeBtn.setStyle("-fx-background-color: #FFEBE9; -fx-text-fill: #CF222E; -fx-font-weight: bold; -fx-font-size: 13px; -fx-padding: 7 16; -fx-background-radius: 6; -fx-cursor: hand; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6;"));
+        closeBtn.setOnMouseExited(e -> closeBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #CF222E; -fx-font-weight: bold; -fx-font-size: 13px; -fx-padding: 7 16; -fx-background-radius: 6; -fx-cursor: hand; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6;"));
         closeBtn.setOnAction(e -> close());
 
         cancelBtn = new Button("Poništi");
@@ -316,13 +304,20 @@ public class ZaglavljeObracunaScreen {
         saveBtn.setOnAction(e -> saveData());
         saveBtn.setDisable(!createMode);
 
-        if (createMode) {
-            footer.getChildren().addAll(spacer, closeBtn, cancelBtn, saveBtn);
-        } else {
-            footer.getChildren().addAll(azurirajXmlBtn, spacer, closeBtn, cancelBtn, saveBtn);
-        }
+        footer.getChildren().addAll(saveBtn, cancelBtn, spacer, closeBtn);
 
         return footer;
+    }
+
+    private void loadVrstePrihoda() {
+        try {
+            Connection conn = DatabaseConnection.getInstance().getMainConnection();
+            if (conn != null) {
+                tipIsplateCombo.getItems().setAll(new VrstaPrihodaDao().findAll(conn));
+            }
+        } catch (Exception e) {
+            System.err.println("Greška pri učitavanju vrsta prihoda: " + e.getMessage());
+        }
     }
 
     private void loadPoslodavci() {
@@ -385,8 +380,9 @@ public class ZaglavljeObracunaScreen {
 
         // Tip isplate
         if (obracunDef.getOvp() != null) {
-            for (String item : tipIsplateCombo.getItems()) {
-                if (item.startsWith(String.valueOf(obracunDef.getOvp()))) {
+            String ovp = String.valueOf(obracunDef.getOvp());
+            for (VrstaPrihoda item : tipIsplateCombo.getItems()) {
+                if (item.getVpz() != null && item.getVpz().trim().equals(ovp)) {
                     tipIsplateCombo.setValue(item);
                     break;
                 }
@@ -480,10 +476,14 @@ public class ZaglavljeObracunaScreen {
         obracunDef.setNazivObracuna(nazivField.getText());
 
         // Izvuci OVP iz combo
-        String tipValue = tipIsplateCombo.getValue();
-        if (tipValue != null) {
-            String ovpStr = tipValue.split(" - ")[0];
-            obracunDef.setOvp(Integer.parseInt(ovpStr));
+        VrstaPrihoda tipValue = tipIsplateCombo.getValue();
+        if (tipValue != null && tipValue.getVpz() != null) {
+            try {
+                obracunDef.setOvp(Integer.parseInt(tipValue.getVpz().trim()));
+            } catch (NumberFormatException e) {
+                showError("Validacija", "Šifra vrste isplate nije numerička: " + tipValue.getVpz());
+                return;
+            }
         }
 
         obracunDef.setMesec(mesecField.getText());
@@ -578,35 +578,6 @@ public class ZaglavljeObracunaScreen {
         if (cancelBtn != null) cancelBtn.setDisable(true);
     }
 
-    private void azurirajXml() {
-        if (hasUnsavedChanges) {
-            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-            confirm.setTitle("Nesačuvane izmene");
-            confirm.setHeaderText("Morate sačuvati izmene pre pravljenja izveštaja.");
-            confirm.setContentText("Da li želite da sačuvate izmene?");
-            ButtonType btnDa = new ButtonType("Da, sačuvaj");
-            ButtonType btnNe = new ButtonType("Ne, vrati se", ButtonBar.ButtonData.CANCEL_CLOSE);
-            confirm.getButtonTypes().setAll(btnDa, btnNe);
-            confirm.showAndWait().ifPresent(btn -> {
-                if (btn == btnDa) {
-                    saveData();
-                    if (!hasUnsavedChanges) {
-                        doAzurirajXml();
-                    }
-                }
-                // btn == Ne → samo se vrati, ništa
-            });
-            return;
-        }
-        doAzurirajXml();
-    }
-
-    private void doAzurirajXml() {
-        showInfo("Ažuriranje XML",
-                "XML podaci bi bili ažurirani sa trenutnim podacima isplatioca.\n\n" +
-                        "(Funkcionalnost u razvoju)");
-    }
-
     private void close() {
         if (hasUnsavedChanges) {
             Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
@@ -624,14 +595,6 @@ public class ZaglavljeObracunaScreen {
     private void showError(String title, String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle("Greška");
-        alert.setHeaderText(title);
-        alert.setContentText(message);
-        alert.showAndWait();
-    }
-
-    private void showInfo(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Info");
         alert.setHeaderText(title);
         alert.setContentText(message);
         alert.showAndWait();

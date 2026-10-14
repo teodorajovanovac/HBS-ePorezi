@@ -38,6 +38,12 @@ public class PodesavanjaScreen {
     // Korisnici
     private TableView<Staff> korisniciTable;
 
+    // Footer i praćenje nesačuvanih izmena
+    private Button saveBtn;
+    private Button cancelBtn;
+    private boolean hasUnsavedChanges = false;
+    private boolean loading = false;
+
     public PodesavanjaScreen() {
         createUI();
         loadSettings();
@@ -304,21 +310,72 @@ public class PodesavanjaScreen {
         HBox footer = new HBox(10);
         footer.setStyle("-fx-background-color: #F6F8FA; -fx-border-color: #D0D7DE transparent transparent transparent; -fx-border-width: 1 0 0 0;");
         footer.setPadding(new Insets(10, 20, 10, 20));
-        footer.setAlignment(Pos.CENTER_RIGHT);
+        footer.setAlignment(Pos.CENTER_LEFT);
 
-        Button nazadBtn = new Button("Nazad");
-        nazadBtn.setStyle("-fx-background-color: white; -fx-text-fill: #57606A; -fx-font-size: 13px; -fx-padding: 7 16; -fx-background-radius: 6; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-cursor: hand;");
-        nazadBtn.setOnAction(e -> HbsZaradeApp.showMainMenu());
-
-        Button saveBtn = new Button("Snimi");
+        saveBtn = new Button("Snimi");
         saveBtn.setStyle("-fx-background-color: #1A7F37; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 7 16; -fx-background-radius: 6; -fx-cursor: hand;");
+        saveBtn.setOnMouseEntered(e -> saveBtn.setStyle("-fx-background-color: #116329; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 7 16; -fx-background-radius: 6; -fx-cursor: hand;"));
+        saveBtn.setOnMouseExited(e -> saveBtn.setStyle("-fx-background-color: #1A7F37; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 7 16; -fx-background-radius: 6; -fx-cursor: hand;"));
         saveBtn.setOnAction(e -> saveSettings());
+        saveBtn.setDisable(true);
 
-        footer.getChildren().addAll(nazadBtn, saveBtn);
+        cancelBtn = new Button("Poništi");
+        cancelBtn.setStyle("-fx-background-color: white; -fx-text-fill: #57606A; -fx-font-size: 13px; -fx-padding: 7 16; -fx-background-radius: 6; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-cursor: hand;");
+        cancelBtn.setOnAction(e -> loadSettings());
+        cancelBtn.setDisable(true);
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        Button closeBtn = new Button("Zatvori");
+        closeBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #CF222E; -fx-font-weight: bold; -fx-font-size: 13px; -fx-padding: 7 16; -fx-background-radius: 6; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-cursor: hand;");
+        closeBtn.setOnMouseEntered(e -> closeBtn.setStyle("-fx-background-color: #FFEBE9; -fx-text-fill: #CF222E; -fx-font-weight: bold; -fx-font-size: 13px; -fx-padding: 7 16; -fx-background-radius: 6; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-cursor: hand;"));
+        closeBtn.setOnMouseExited(e -> closeBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #CF222E; -fx-font-weight: bold; -fx-font-size: 13px; -fx-padding: 7 16; -fx-background-radius: 6; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-cursor: hand;"));
+        closeBtn.setOnAction(e -> {
+            if (hasUnsavedChanges) {
+                Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+                confirm.setTitle("Nesačuvane izmene");
+                confirm.setHeaderText("Imate nesačuvane izmene.");
+                confirm.setContentText("Da li ste sigurni da želite da izađete bez čuvanja?");
+                Optional<ButtonType> result = confirm.showAndWait();
+                if (result.isEmpty() || result.get() != ButtonType.OK) return;
+            }
+            HbsZaradeApp.showMainMenu();
+        });
+
+        // Praćenje izmena putanja
+        for (TextField f : List.of(exportXmlPathField, exportPrimaocPdfField, exportObracunPdfField)) {
+            f.textProperty().addListener((obs, o, n) -> markDirty());
+        }
+
+        footer.getChildren().addAll(saveBtn, cancelBtn, spacer, closeBtn);
         return footer;
     }
 
+    private void markDirty() {
+        if (loading) return;
+        hasUnsavedChanges = true;
+        saveBtn.setDisable(false);
+        cancelBtn.setDisable(false);
+    }
+
+    private void markClean() {
+        hasUnsavedChanges = false;
+        saveBtn.setDisable(true);
+        cancelBtn.setDisable(true);
+    }
+
     private void loadSettings() {
+        loading = true;
+        try {
+            loadSettingsValues();
+        } finally {
+            loading = false;
+        }
+        markClean();
+    }
+
+    private void loadSettingsValues() {
         // Učitaj putanju do DB
         try {
             var dbConfig = DatabaseConfig.loadFromProperties();
@@ -485,6 +542,7 @@ public class PodesavanjaScreen {
         passField.setPromptText(existing != null ? "(ostavite prazno da ne menjate lozinku)" : "Lozinka");
 
         ComboBox<Integer> levelCombo = new ComboBox<>();
+        ComboBoxHelper.openOnSpace(levelCombo);
         int myLevel = HbsZaradeApp.getUserLevel();
         // Administrator može da dodeli sve nivoe; Moderator ne može da dodeli nivo 9
         if (myLevel >= 9) {
@@ -542,6 +600,7 @@ public class PodesavanjaScreen {
                 dao.saveSetting(conn, AppSettingsDao.KEY_PRIMALAC_PDF_PATH, exportPrimaocPdfField.getText().trim());
                 dao.saveSetting(conn, AppSettingsDao.KEY_OBRACUN_PDF_PATH,  exportObracunPdfField.getText().trim());
             }
+            markClean();
             showInfo("Sačuvano", "Podešavanja su uspješno sačuvana.");
         } catch (Exception e) {
             showInfo("Greška", "Nije moguće snimiti podešavanja: " + e.getMessage());

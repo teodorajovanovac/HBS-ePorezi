@@ -1,28 +1,24 @@
 package rs.hbs.zarade.reporting;
 
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 import rs.hbs.zarade.domain.Obracun;
 import rs.hbs.zarade.domain.ObracunDefinicija;
 import rs.hbs.zarade.domain.Poslodavac;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
 import java.io.File;
-import java.io.StringWriter;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
- * Generisanje PPP-PO XML za Poresku upravu Srbije.
+ * Generisanje XML-a poreske deklaracije (PPP-PO) za Poresku upravu Srbije.
  *
- * Struktura zasnovana na: stari_access/vba/Zarade/mod_GenXML.txt
+ * Format je identičan izlazu iz Accessa (primer/obracun_489-access.xml):
+ * koren PodaciPoreskeDeklaracije sa sekcijama PodaciOPrijavi, PodaciOIsplatiocu
+ * i DeklarisaniPrihodi (jedan PodaciOPrihodima po primaocu). Elementi su u
+ * zasebnim redovima bez uvlačenja, prazni elementi nisu skraćeni.
  *
  * NAPOMENA: Ovaj XML se direktno koristi za prijavljivanje Poreskoj upravi.
  * Struktura mora biti 100% kompatibilna sa propisanim formatom.
@@ -33,7 +29,7 @@ public class XmlExporter {
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     /**
-     * Generiše PPP-PO XML string za pregled.
+     * Generiše XML string za pregled.
      *
      * @param definicija zaglavlje obračuna
      * @param stavke     lista pojedinačnih obračuna
@@ -42,13 +38,12 @@ public class XmlExporter {
      */
     public static String generateXmlString(ObracunDefinicija definicija,
                                            List<Obracun> stavke,
-                                           Poslodavac poslodavac) throws Exception {
-        Document doc = buildDocument(definicija, stavke, poslodavac);
-        return docToString(doc);
+                                           Poslodavac poslodavac) {
+        return buildXml(definicija, stavke, poslodavac);
     }
 
     /**
-     * Upisuje PPP-PO XML u fajl.
+     * Upisuje XML u fajl (UTF-8).
      *
      * @param outputFile odredišni fajl
      * @param definicija zaglavlje obračuna
@@ -59,117 +54,93 @@ public class XmlExporter {
                                     ObracunDefinicija definicija,
                                     List<Obracun> stavke,
                                     Poslodavac poslodavac) throws Exception {
-        Document doc = buildDocument(definicija, stavke, poslodavac);
-        writeDocToFile(doc, outputFile);
+        Files.write(outputFile.toPath(),
+                buildXml(definicija, stavke, poslodavac).getBytes(StandardCharsets.UTF_8));
     }
 
     // -----------------------------------------------------------------------
     // Private implementation
     // -----------------------------------------------------------------------
 
-    private static Document buildDocument(ObracunDefinicija definicija,
-                                          List<Obracun> stavke,
-                                          Poslodavac poslodavac) throws Exception {
-        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-        dbf.setNamespaceAware(true);
-        DocumentBuilder db = dbf.newDocumentBuilder();
-        Document doc = db.newDocument();
+    private static String buildXml(ObracunDefinicija def, List<Obracun> stavke, Poslodavac p) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
+                .append("<tns:PodaciPoreskeDeklaracije")
+                .append(" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"")
+                .append(" xmlns:tns=\"").append(TNS_NS).append("\"")
+                .append(" xsi:schemaLocation=\"").append(TNS_NS).append("\">\n");
 
-        // Root: PPP_PO
-        Element root = doc.createElementNS(TNS_NS, "tns:PPP_PO");
-        root.setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:tns", TNS_NS);
+        // Podaci o prijavi
+        sb.append("<tns:PodaciOPrijavi>\n");
+        tag(sb, "KlijentskaOznakaDeklaracije", "");
+        tag(sb, "VrstaPrijave", "1"); // 1 = originalna
+        tag(sb, "ObracunskiPeriod", nvl(def.getMesec()));
+        tag(sb, "DatumPlacanja", def.getDatumSlanja() != null ? def.getDatumSlanja().format(DATE_FMT)
+                : def.getDatumObracuna() != null ? def.getDatumObracuna().format(DATE_FMT) : "");
+        tag(sb, "NajnizaOsnovica", "0");
+        sb.append("</tns:PodaciOPrijavi>\n");
 
-        String vrstaPrijave = "1"; // 1 = originalna
-        String obracunskiPeriod = definicija.getMesec() != null ? definicija.getMesec() : "";
-        String pib = poslodavac != null && poslodavac.getPoreskiIdentifikacioniBroj() != null
-                ? poslodavac.getPoreskiIdentifikacioniBroj() : "";
+        // Podaci o isplatiocu
+        sb.append("<tns:PodaciOIsplatiocu>\n");
+        tag(sb, "TipIsplatioca", p != null && p.getTipIsplatioca() != null ? String.valueOf(p.getTipIsplatioca()) : "");
+        tag(sb, "VrstaIdentifikatorIsplatioca", "0");
+        tag(sb, "PoreskiIdentifikacioniBroj", p != null ? nvl(p.getPoreskiIdentifikacioniBroj()) : "");
+        tag(sb, "BrojZaposlenih", p != null && p.getBrojZaposlenih() != null ? String.valueOf(p.getBrojZaposlenih()) : "0");
+        tag(sb, "MaticniBrojisplatioca", p != null ? nvl(p.getMaticniBrojIsplatioca()) : "");
+        tag(sb, "NazivPrezimeIme", p != null ? nvl(p.getNazivPrezimeIme()) : "");
+        tag(sb, "SedistePrebivaliste", p != null ? nvl(p.getSedistePrebivaliste()) : "");
+        tag(sb, "Telefon", p != null ? nvl(p.getTelefon()) : "");
+        tag(sb, "UlicaIBroj", p != null ? nvl(p.getUlicaIBroj()) : "");
+        tag(sb, "eMail", p != null ? nvl(p.getEmail()) : "");
+        sb.append("</tns:PodaciOIsplatiocu>\n");
 
-        root.setAttribute("VrstaPrijave", vrstaPrijave);
-        root.setAttribute("ObracunskiPeriod", obracunskiPeriod);
-        root.setAttribute("PoreskiIdentBrPodnosioca", pib);
-
-        // Podnosilac
-        Element podnosilac = doc.createElementNS(TNS_NS, "tns:Podnosilac");
-        if (poslodavac != null) {
-            podnosilac.setAttribute("PIB", nvl(poslodavac.getPoreskiIdentifikacioniBroj()));
-            podnosilac.setAttribute("MB", nvl(poslodavac.getMaticniBrojIsplatioca()));
-            podnosilac.setAttribute("NazivPodnosioca", nvl(poslodavac.getNazivPrezimeIme()));
-            podnosilac.setAttribute("BrojZaposlenih",
-                    poslodavac.getBrojZaposlenih() != null ?
-                            String.valueOf(poslodavac.getBrojZaposlenih()) : "0");
-        }
-        root.appendChild(podnosilac);
-
-        // ObracunskiPodaci
-        Element obracunskiPodaci = doc.createElementNS(TNS_NS, "tns:ObracunskiPodaci");
-        obracunskiPodaci.setAttribute("NazivObracuna", nvl(definicija.getNazivObracuna()));
-        obracunskiPodaci.setAttribute("DatumObracuna",
-                definicija.getDatumObracuna() != null ?
-                        definicija.getDatumObracuna().format(DATE_FMT) : "");
-        obracunskiPodaci.setAttribute("OznakaKonacne", nvl(definicija.getOznakaZaKonacnu()));
-        root.appendChild(obracunskiPodaci);
-
-        // PojPrijava — jedna po primaocu
-        Element pojPrijava = doc.createElementNS(TNS_NS, "tns:PojPrijava");
-
+        // Deklarisani prihodi — jedan PodaciOPrihodima po stavci
+        sb.append("<tns:DeklarisaniPrihodi>\n");
+        int redniBroj = 0;
         for (Obracun o : stavke) {
             if (o.getNeto() == null || o.getNeto().compareTo(BigDecimal.ZERO) <= 0) {
                 continue; // preskoči nulte stavke
             }
-
-            Element primalac = doc.createElementNS(TNS_NS, "tns:Primalac");
-            primalac.setAttribute("VrstaIdentifikatora",
-                    nvl(o.getVrstaIdentifikatoraPrimaoca()));
-            primalac.setAttribute("Identifikator",
-                    nvl(o.getIdentifikatorPrimaoca()));
-            primalac.setAttribute("Prezime", nvl(o.getPrezime()));
-            primalac.setAttribute("Ime", nvl(o.getIme()));
-            primalac.setAttribute("OznakaPrebivalista", nvl(o.getOznakaPrebivalista()));
-
-            // SVP kodovi
-            primalac.setAttribute("SVP1", nvl(o.getSvp1()));
-            primalac.setAttribute("SVP2", nvl(o.getSvp2()));
-            primalac.setAttribute("SVP3", nvl(o.getSvp3()));
-
-            // Prihodi
-            Element prihod = doc.createElementNS(TNS_NS, "tns:Prihod");
-            prihod.setAttribute("VPZ", nvl(o.getSvp3()));
-            prihod.setAttribute("Bruto", bd(o.getBruto()));
-            prihod.setAttribute("Neto", bd(o.getNeto()));
-            prihod.setAttribute("Porez", bd(o.getPorez()));
-            prihod.setAttribute("PIO", bd(o.getPio()));
-            prihod.setAttribute("ZDR", bd(o.getZdr()));
-            prihod.setAttribute("NEZ", bd(o.getNez()));
-
-            primalac.appendChild(prihod);
-            pojPrijava.appendChild(primalac);
+            sb.append("<tns:PodaciOPrihodima>\n");
+            tag(sb, "RedniBroj", String.valueOf(++redniBroj));
+            tag(sb, "VrstaIdentifikatoraPrimaoca", nvl(o.getVrstaIdentifikatoraPrimaoca()));
+            tag(sb, "IdentifikatorPrimaoca", nvl(o.getIdentifikatorPrimaoca()));
+            tag(sb, "Prezime", nvl(o.getPrezime()));
+            tag(sb, "Ime", nvl(o.getIme()));
+            tag(sb, "OznakaPrebivalista", nvl(o.getOznakaPrebivalista()));
+            tag(sb, "SVP", svp(o));
+            tag(sb, "BrojKalendarskihDana",
+                    o.getBrojKalendarskihDana() != null ? String.valueOf(o.getBrojKalendarskihDana()) : "0");
+            tag(sb, "Bruto", bd(o.getBruto()));
+            tag(sb, "OsnovicaPorez", bd(o.getOsnovicaPorez()));
+            tag(sb, "Porez", bd(o.getPorez()));
+            tag(sb, "OsnovicaDoprinosi", bd(o.getOsnovicaDoprinosi()));
+            tag(sb, "PIO", bd(o.getPio()));
+            tag(sb, "ZDR", bd(o.getZdr()));
+            tag(sb, "NEZ", bd(o.getNez()));
+            tag(sb, "PIOBen", bd(o.getPioBen()));
+            sb.append("</tns:PodaciOPrihodima>\n");
         }
-
-        root.appendChild(pojPrijava);
-        doc.appendChild(root);
-        return doc;
+        sb.append("</tns:DeklarisaniPrihodi>\n");
+        sb.append("</tns:PodaciPoreskeDeklaracije>\n");
+        return sb.toString();
     }
 
-    private static String docToString(Document doc) throws Exception {
-        TransformerFactory tf = TransformerFactory.newInstance();
-        Transformer transformer = tf.newTransformer();
-        transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
-        transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-        transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
-
-        StringWriter sw = new StringWriter();
-        transformer.transform(new DOMSource(doc), new StreamResult(sw));
-        return sw.toString();
+    /** Kompletna šifra SVP (9 cifara); ako nije upisana, slaže se iz delova SVP-1..SVP-5. */
+    private static String svp(Obracun o) {
+        if (o.getSvp() != null && !o.getSvp().trim().isEmpty()) {
+            return o.getSvp().trim();
+        }
+        return nvl(o.getSvp1()) + nvl(o.getSvp2()) + nvl(o.getSvp3()) + nvl(o.getSvp4()) + nvl(o.getSvp5());
     }
 
-    private static void writeDocToFile(Document doc, File file) throws Exception {
-        TransformerFactory tf = TransformerFactory.newInstance();
-        Transformer transformer = tf.newTransformer();
-        transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
-        transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-        transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
+    private static void tag(StringBuilder sb, String name, String value) {
+        sb.append("<tns:").append(name).append('>').append(escape(value))
+                .append("</tns:").append(name).append(">\n");
+    }
 
-        transformer.transform(new DOMSource(doc), new StreamResult(file));
+    private static String escape(String s) {
+        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
     }
 
     private static String nvl(String value) {
@@ -177,6 +148,6 @@ public class XmlExporter {
     }
 
     private static String bd(BigDecimal value) {
-        return value != null ? value.toPlainString() : "0";
+        return value != null ? value.setScale(2, RoundingMode.HALF_UP).toPlainString() : "0.00";
     }
 }

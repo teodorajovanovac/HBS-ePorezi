@@ -44,6 +44,8 @@ public class ComboBoxHelper {
     public static <T> void makeSearchable(ComboBox<T> combo, Function<T, String> textExtractor) {
         if (combo == null) return;
 
+        openOnSpace(combo);
+
         final StringBuilder buffer = new StringBuilder();
         final long[] lastKeyPressTime = {0};
 
@@ -131,6 +133,18 @@ public class ComboBoxHelper {
                 lv.addEventFilter(KeyEvent.KEY_PRESSED, keyHandler);
             }
         }));
+    }
+
+    /** Space otvara padajuću listu, isto kao F4. */
+    public static void openOnSpace(ComboBox<?> combo) {
+        if (combo == null) return;
+        combo.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
+            if (e.getCode() == KeyCode.SPACE && !combo.isEditable() && !combo.isShowing()
+                    && !e.isControlDown() && !e.isAltDown() && !e.isMetaDown()) {
+                combo.show();
+                e.consume();
+            }
+        });
     }
 
     private static <T> void selectIndex(ComboBox<T> combo, int index) {

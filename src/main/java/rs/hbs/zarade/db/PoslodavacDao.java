@@ -26,7 +26,7 @@ public class PoslodavacDao implements BaseDao<Poslodavac, Integer> {
             "UPDATE " + TABLE_NAME +
             " SET TipIsplatioca=?, PoreskiIdentifikacioniBroj=?, MaticniBrojisplatioca=?," +
             " NazivPrezimeIme=?, BrojZaposlenih=?, SedistePrebivaliste=?," +
-            " UlicaIBroj=?, Telefon=?, eMail=?" +
+            " UlicaIBroj=?, Telefon=?, eMail=?, OdgovornoLice=?" +
             " WHERE IDPoslodavac=?";
 
     @Override
@@ -74,7 +74,8 @@ public class PoslodavacDao implements BaseDao<Poslodavac, Integer> {
             stmt.setString(7, entity.getUlicaIBroj());
             stmt.setString(8, entity.getTelefon());
             stmt.setString(9, entity.getEmail());
-            stmt.setInt(10, entity.getIdPoslodavac());
+            stmt.setString(10, entity.getOdgovornoLice());
+            stmt.setInt(11, entity.getIdPoslodavac());
             stmt.executeUpdate();
         }
     }

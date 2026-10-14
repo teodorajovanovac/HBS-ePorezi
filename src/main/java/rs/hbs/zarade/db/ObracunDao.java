@@ -67,13 +67,16 @@ public class ObracunDao implements BaseDao<Obracun, Integer> {
         " SET Bruto=?, NORM_TROSKOVI=?, OsnovicaPorez=?, OsnovicaDoprinosi=?," +
         "     Porez=?, PoreskoOslobodjenje=?, PIO=?, ZDR=?, NEZ=?, PIOBen=?," +
         "     P_PIO=?, P_ZDR=?, P_NEZ=?, Z_PIO=?, Z_ZDR=?, Z_NEZ=?," +
-        "     MFP=?, NETO=?, Obracunato=?" +
+        "     MFP=?, NETO=?, Obracunato=?," +
+        "     lnkZap=?, Prezime=?, Ime=?, IdentifikatorPrimaoca=?, OznakaPrebivalista=?," +
+        "     [SVP-2]=?, [SVP-3]=?, SVP=?, [SVP-1]=?, [SVP-4]=?, [SVP-5]=?" +
         " WHERE IDpobracun=?";
 
     private static final String DELETE_SQL = "DELETE FROM " + TABLE_NAME + " WHERE IDpobracun=?";
 
     @Override
     public Obracun save(Connection connection, Obracun entity) throws SQLException {
+        entity.rebuildSvp();
         try (PreparedStatement stmt = connection.prepareStatement(INSERT_SQL,
                 Statement.RETURN_GENERATED_KEYS)) {
             setIntOrNull(stmt, 1, entity.getLnkObracun());
@@ -113,6 +116,7 @@ public class ObracunDao implements BaseDao<Obracun, Integer> {
 
     @Override
     public void update(Connection connection, Obracun entity) throws SQLException {
+        entity.rebuildSvp();
         try (PreparedStatement stmt = connection.prepareStatement(UPDATE_FINANCIAL_SQL)) {
             stmt.setBigDecimal(1, entity.getBruto());
             stmt.setBigDecimal(2, entity.getNormTroskovi());
@@ -134,7 +138,18 @@ public class ObracunDao implements BaseDao<Obracun, Integer> {
             stmt.setBigDecimal(18, entity.getNeto());
             stmt.setTimestamp(19, entity.getObracunato() != null ?
                     Timestamp.valueOf(entity.getObracunato()) : null);
-            stmt.setInt(20, entity.getIdPobracun());
+            setIntOrNull(stmt, 20, entity.getLnkZap());
+            stmt.setString(21, entity.getPrezime());
+            stmt.setString(22, entity.getIme());
+            stmt.setString(23, entity.getIdentifikatorPrimaoca());
+            stmt.setString(24, entity.getOznakaPrebivalista());
+            stmt.setString(25, entity.getSvp2());
+            stmt.setString(26, entity.getSvp3());
+            stmt.setString(27, entity.getSvp());
+            stmt.setString(28, entity.getSvp1());
+            stmt.setString(29, entity.getSvp4());
+            stmt.setString(30, entity.getSvp5());
+            stmt.setInt(31, entity.getIdPobracun());
             stmt.executeUpdate();
         }
     }

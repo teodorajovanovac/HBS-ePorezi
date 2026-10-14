@@ -43,10 +43,10 @@ import java.util.Optional;
  */
 public class PrimalacDetaljiScreen {
 
-    private static final String COLOR_VIEW    = "#343942"; // tamno siva: pogled
-    private static final String COLOR_NEW     = "#0969DA"; // plava: novi
-    private static final String COLOR_DIRTY   = "#9A6700"; // amber: nesačuvane izmene
-    private static final String COLOR_SAVED   = "#1A7F37"; // zelena: sačuvano
+    private static final String COLOR_VIEW = "#343942"; // tamno siva: pogled
+    private static final String COLOR_NEW = "#0969DA"; // plava: novi
+    private static final String COLOR_DIRTY = "#9A6700"; // amber: nesačuvane izmene
+    private static final String COLOR_SAVED = "#1A7F37"; // zelena: sačuvano
 
     private BorderPane root;
     private HBox header;
@@ -59,6 +59,7 @@ public class PrimalacDetaljiScreen {
     private boolean isNew;
     private boolean hasUnsavedChanges = false;
     private boolean loading = false;
+    private Runnable onClose;
 
     private TextField idField;
     private TextField prezimeField;
@@ -121,8 +122,18 @@ public class PrimalacDetaljiScreen {
         root.setUserData((AppLayout.DirtyCheckable) this::confirmLeave);
     }
 
-    private boolean confirmLeave() {
-        if (!hasUnsavedChanges) return true;
+    /**
+     * Kad je zadato, "Zatvori" poziva ovo umesto navigacije na listu primalaca
+     * (ekran se koristi u zasebnom prozoru).
+     */
+    public void setOnClose(Runnable onClose) {
+        this.onClose = onClose;
+    }
+
+    /** Pita za potvrdu ako ima nesačuvanih izmena; true ako se sme napustiti. */
+    boolean confirmLeave() {
+        if (!hasUnsavedChanges)
+            return true;
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         confirm.setTitle("Nesačuvane izmene");
         confirm.setHeaderText("Imate nesačuvane izmene.");
@@ -185,34 +196,43 @@ public class PrimalacDetaljiScreen {
 
         idField = new TextField();
         idField.setEditable(false);
-        idField.setStyle("-fx-background-color: #F6F8FA; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6; -fx-text-fill: #848D97;");
+        idField.setStyle(
+                "-fx-background-color: #F6F8FA; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6; -fx-text-fill: #848D97;");
 
         prezimeField = new TextField();
-        prezimeField.setStyle("-fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;");
+        prezimeField.setStyle(
+                "-fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;");
         prezimeField.setPromptText("Prezime primaoca");
 
         imeField = new TextField();
-        imeField.setStyle("-fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;");
+        imeField.setStyle(
+                "-fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;");
         imeField.setPromptText("Ime primaoca");
 
         adresaField = new TextField();
-        adresaField.setStyle("-fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;");
+        adresaField.setStyle(
+                "-fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;");
 
         pbGradField = new TextField();
-        pbGradField.setStyle("-fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;");
+        pbGradField.setStyle(
+                "-fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;");
 
         sifraOpstineCombo = new ComboBox<>();
         sifraOpstineCombo.setPrefWidth(100);
-        sifraOpstineCombo.setStyle("-fx-font-size: 13px; -fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-radius: 6;");
-        for (Opstina o : opstine) sifraOpstineCombo.getItems().add(o);
+        sifraOpstineCombo.setStyle(
+                "-fx-font-size: 13px; -fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-radius: 6;");
+        for (Opstina o : opstine)
+            sifraOpstineCombo.getItems().add(o);
         sifraOpstineCombo.setCellFactory(lv -> new ListCell<Opstina>() {
-            @Override protected void updateItem(Opstina item, boolean empty) {
+            @Override
+            protected void updateItem(Opstina item, boolean empty) {
                 super.updateItem(item, empty);
                 setText(empty || item == null ? "" : item.getSifra());
             }
         });
         sifraOpstineCombo.setButtonCell(new ListCell<Opstina>() {
-            @Override protected void updateItem(Opstina item, boolean empty) {
+            @Override
+            protected void updateItem(Opstina item, boolean empty) {
                 super.updateItem(item, empty);
                 setText(empty || item == null ? "" : item.getSifra());
             }
@@ -220,16 +240,20 @@ public class PrimalacDetaljiScreen {
 
         nazivOpstineCombo = new ComboBox<>();
         nazivOpstineCombo.setPrefWidth(200);
-        nazivOpstineCombo.setStyle("-fx-font-size: 13px; -fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-radius: 6;");
-        for (Opstina o : opstine) nazivOpstineCombo.getItems().add(o);
+        nazivOpstineCombo.setStyle(
+                "-fx-font-size: 13px; -fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-radius: 6;");
+        for (Opstina o : opstine)
+            nazivOpstineCombo.getItems().add(o);
         nazivOpstineCombo.setCellFactory(lv -> new ListCell<Opstina>() {
-            @Override protected void updateItem(Opstina item, boolean empty) {
+            @Override
+            protected void updateItem(Opstina item, boolean empty) {
                 super.updateItem(item, empty);
                 setText(empty || item == null ? "" : item.getNaziv());
             }
         });
         nazivOpstineCombo.setButtonCell(new ListCell<Opstina>() {
-            @Override protected void updateItem(Opstina item, boolean empty) {
+            @Override
+            protected void updateItem(Opstina item, boolean empty) {
                 super.updateItem(item, empty);
                 setText(empty || item == null ? "" : item.getNaziv());
             }
@@ -254,17 +278,20 @@ public class PrimalacDetaljiScreen {
         mbLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
         mbLabel.setStyle("-fx-text-fill: #0969DA;");
         mbField = new TextField();
-        mbField.setStyle("-fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;");
+        mbField.setStyle(
+                "-fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;");
         mbValidationLabel = new Label();
         mbValidationLabel.setFont(Font.font("Segoe UI", 11));
         mbField.textProperty().addListener((obs, oldVal, newVal) -> validateMb(newVal));
         mbBox.getChildren().addAll(mbLabel, mbField, mbValidationLabel);
 
         mobilniField = new TextField();
-        mobilniField.setStyle("-fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;");
+        mobilniField.setStyle(
+                "-fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;");
 
         emailField = new TextField();
-        emailField.setStyle("-fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;");
+        emailField.setStyle(
+                "-fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;");
 
         HBox statusBox = new HBox(10);
         statusBox.setAlignment(Pos.CENTER_LEFT);
@@ -282,7 +309,7 @@ public class PrimalacDetaljiScreen {
         opstinaRow.setAlignment(Pos.CENTER_LEFT);
         Label opstinaLabel = new Label("Opština:");
         opstinaLabel.setPrefWidth(120);
-        opstinaLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
+        opstinaLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
         opstinaLabel.setStyle("-fx-text-fill: #57606A;");
         opstinaRow.getChildren().addAll(opstinaLabel, sifraOpstineCombo, nazivOpstineCombo);
 
@@ -296,8 +323,7 @@ public class PrimalacDetaljiScreen {
                 opstinaRow, mbBox,
                 createFieldRow("Mobilni:", mobilniField),
                 createFieldRow("Email:", emailField),
-                statusBox
-        );
+                statusBox);
 
         // Dirty tracking
         prezimeField.textProperty().addListener((obs, o, n) -> markDirty());
@@ -341,15 +367,18 @@ public class PrimalacDetaljiScreen {
         vrstaPrimaocaCombo = new ComboBox<>();
         vrstaPrimaocaCombo.setMaxWidth(Double.MAX_VALUE);
         vrstaPrimaocaCombo.setVisibleRowCount(13);
-        for (VrstaPrimaoca vp : vrstePrimaoca) vrstaPrimaocaCombo.getItems().add(vp);
+        for (VrstaPrimaoca vp : vrstePrimaoca)
+            vrstaPrimaocaCombo.getItems().add(vp);
         vrstaPrimaocaCombo.setCellFactory(lv -> new ListCell<VrstaPrimaoca>() {
-            @Override protected void updateItem(VrstaPrimaoca item, boolean empty) {
+            @Override
+            protected void updateItem(VrstaPrimaoca item, boolean empty) {
                 super.updateItem(item, empty);
                 setText(empty || item == null ? "" : item.getDisplayName());
             }
         });
         vrstaPrimaocaCombo.setButtonCell(new ListCell<VrstaPrimaoca>() {
-            @Override protected void updateItem(VrstaPrimaoca item, boolean empty) {
+            @Override
+            protected void updateItem(VrstaPrimaoca item, boolean empty) {
                 super.updateItem(item, empty);
                 setText(empty || item == null ? "Izaberite vrstu primaoca..." : item.getDisplayName());
             }
@@ -363,8 +392,7 @@ public class PrimalacDetaljiScreen {
         zaposlenjeContent.getChildren().addAll(
                 procenatBox,
                 vrstaPrimaocaLabel,
-                vrstaPrimaocaCombo
-        );
+                vrstaPrimaocaCombo);
 
         // Dirty tracking
         procenatField.textProperty().addListener((obs, o, n) -> markDirty());
@@ -378,43 +406,57 @@ public class PrimalacDetaljiScreen {
 
     private HBox createFooter() {
         HBox footer = new HBox(10);
-        footer.setStyle("-fx-background-color: #F6F8FA; -fx-border-color: #D0D7DE transparent transparent transparent; -fx-border-width: 1 0 0 0;");
+        footer.setStyle(
+                "-fx-background-color: #F6F8FA; -fx-border-color: #D0D7DE transparent transparent transparent; -fx-border-width: 1 0 0 0;");
         footer.setPadding(new Insets(10, 20, 10, 20));
         footer.setAlignment(Pos.CENTER_LEFT);
 
         saveBtn = new Button("Snimi");
-        saveBtn.setStyle("-fx-background-color: #1A7F37; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 7 18; -fx-background-radius: 6; -fx-cursor: hand;");
-        saveBtn.setOnMouseEntered(e -> saveBtn.setStyle("-fx-background-color: #116329; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 7 18; -fx-background-radius: 6; -fx-cursor: hand;"));
-        saveBtn.setOnMouseExited(e -> saveBtn.setStyle("-fx-background-color: #1A7F37; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 7 18; -fx-background-radius: 6; -fx-cursor: hand;"));
+        saveBtn.setStyle(
+                "-fx-background-color: #1A7F37; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 7 18; -fx-background-radius: 6; -fx-cursor: hand;");
+        saveBtn.setOnMouseEntered(e -> saveBtn.setStyle(
+                "-fx-background-color: #116329; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 7 18; -fx-background-radius: 6; -fx-cursor: hand;"));
+        saveBtn.setOnMouseExited(e -> saveBtn.setStyle(
+                "-fx-background-color: #1A7F37; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 7 18; -fx-background-radius: 6; -fx-cursor: hand;"));
         saveBtn.setOnAction(e -> saveData());
         saveBtn.setDisable(!isNew);
 
         cancelBtn = new Button("Poništi");
-        cancelBtn.setStyle("-fx-background-color: white; -fx-text-fill: #57606A; -fx-font-size: 13px; -fx-padding: 7 16; -fx-background-radius: 6; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-cursor: hand;");
+        cancelBtn.setStyle(
+                "-fx-background-color: white; -fx-text-fill: #57606A; -fx-font-size: 13px; -fx-padding: 7 16; -fx-background-radius: 6; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-cursor: hand;");
         cancelBtn.setOnAction(e -> {
             populateFields();
         });
         cancelBtn.setDisable(true);
 
         pppPoBtn = new Button("PPP-PO");
-        pppPoBtn.setStyle("-fx-background-color: #9A6700; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 7 14; -fx-background-radius: 6; -fx-cursor: hand;");
-        pppPoBtn.setOnMouseEntered(e -> pppPoBtn.setStyle("-fx-background-color: #7A5200; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 7 14; -fx-background-radius: 6; -fx-cursor: hand;"));
-        pppPoBtn.setOnMouseExited(e -> pppPoBtn.setStyle("-fx-background-color: #9A6700; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 7 14; -fx-background-radius: 6; -fx-cursor: hand;"));
+        pppPoBtn.setStyle(
+                "-fx-background-color: #9A6700; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 7 14; -fx-background-radius: 6; -fx-cursor: hand;");
+        pppPoBtn.setOnMouseEntered(e -> pppPoBtn.setStyle(
+                "-fx-background-color: #7A5200; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 7 14; -fx-background-radius: 6; -fx-cursor: hand;"));
+        pppPoBtn.setOnMouseExited(e -> pppPoBtn.setStyle(
+                "-fx-background-color: #9A6700; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 7 14; -fx-background-radius: 6; -fx-cursor: hand;"));
         pppPoBtn.setOnAction(e -> doPppPo());
 
         stampaBtn = new Button("Štampa");
-        stampaBtn.setStyle("-fx-background-color: #0969DA; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 7 14; -fx-background-radius: 6; -fx-cursor: hand;");
-        stampaBtn.setOnMouseEntered(e -> stampaBtn.setStyle("-fx-background-color: #0550AE; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 7 14; -fx-background-radius: 6; -fx-cursor: hand;"));
-        stampaBtn.setOnMouseExited(e -> stampaBtn.setStyle("-fx-background-color: #0969DA; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 7 14; -fx-background-radius: 6; -fx-cursor: hand;"));
+        stampaBtn.setStyle(
+                "-fx-background-color: #0969DA; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 7 14; -fx-background-radius: 6; -fx-cursor: hand;");
+        stampaBtn.setOnMouseEntered(e -> stampaBtn.setStyle(
+                "-fx-background-color: #0550AE; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 7 14; -fx-background-radius: 6; -fx-cursor: hand;"));
+        stampaBtn.setOnMouseExited(e -> stampaBtn.setStyle(
+                "-fx-background-color: #0969DA; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 7 14; -fx-background-radius: 6; -fx-cursor: hand;"));
         stampaBtn.setOnAction(e -> doStampa());
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
         Button closeBtn = new Button("Zatvori");
-        closeBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #CF222E; -fx-font-weight: bold; -fx-font-size: 13px; -fx-padding: 7 16; -fx-background-radius: 6; -fx-cursor: hand;");
-        closeBtn.setOnMouseEntered(e -> closeBtn.setStyle("-fx-background-color: #FFEBE9; -fx-text-fill: #CF222E; -fx-font-weight: bold; -fx-font-size: 13px; -fx-padding: 7 16; -fx-background-radius: 6; -fx-cursor: hand;"));
-        closeBtn.setOnMouseExited(e -> closeBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #CF222E; -fx-font-weight: bold; -fx-font-size: 13px; -fx-padding: 7 16; -fx-background-radius: 6; -fx-cursor: hand;"));
+        closeBtn.setStyle(
+                "-fx-background-color: transparent; -fx-text-fill: #CF222E; -fx-font-weight: bold; -fx-font-size: 13px; -fx-padding: 7 16; -fx-background-radius: 6; -fx-cursor: hand; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6;");
+        closeBtn.setOnMouseEntered(e -> closeBtn.setStyle(
+                "-fx-background-color: #FFEBE9; -fx-text-fill: #CF222E; -fx-font-weight: bold; -fx-font-size: 13px; -fx-padding: 7 16; -fx-background-radius: 6; -fx-cursor: hand; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6;"));
+        closeBtn.setOnMouseExited(e -> closeBtn.setStyle(
+                "-fx-background-color: transparent; -fx-text-fill: #CF222E; -fx-font-weight: bold; -fx-font-size: 13px; -fx-padding: 7 16; -fx-background-radius: 6; -fx-cursor: hand; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6;"));
         closeBtn.setOnAction(e -> {
             if (hasUnsavedChanges) {
                 Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
@@ -422,9 +464,14 @@ public class PrimalacDetaljiScreen {
                 confirm.setHeaderText("Imate nesačuvane izmene.");
                 confirm.setContentText("Da li ste sigurni da želite da izađete bez čuvanja?");
                 Optional<ButtonType> result = confirm.showAndWait();
-                if (result.isEmpty() || result.get() != ButtonType.OK) return;
+                if (result.isEmpty() || result.get() != ButtonType.OK)
+                    return;
             }
-            HbsZaradeApp.navigateTo(new PrimaociListaScreen().getRoot());
+            if (onClose != null) {
+                onClose.run();
+            } else {
+                HbsZaradeApp.navigateTo(new PrimaociListaScreen().getRoot());
+            }
         });
 
         footer.getChildren().addAll(saveBtn, cancelBtn, pppPoBtn, stampaBtn, spacer, closeBtn);
@@ -488,23 +535,29 @@ public class PrimalacDetaljiScreen {
             loading = false;
         }
         hasUnsavedChanges = false;
-        if (saveBtn != null) saveBtn.setDisable(!isNew);
-        if (cancelBtn != null) cancelBtn.setDisable(true);
-        if (stampaBtn != null) stampaBtn.setDisable(false);
+        if (saveBtn != null)
+            saveBtn.setDisable(!isNew);
+        if (cancelBtn != null)
+            cancelBtn.setDisable(true);
+        if (stampaBtn != null)
+            stampaBtn.setDisable(false);
         setHeaderColor(isNew ? COLOR_NEW : COLOR_VIEW);
     }
 
     private void saveData() {
         StringBuilder errors = new StringBuilder();
 
-        if (prezimeField.getText().trim().isEmpty()) errors.append("- Prezime je obavezno\n");
-        if (imeField.getText().trim().isEmpty()) errors.append("- Ime je obavezno\n");
+        if (prezimeField.getText().trim().isEmpty())
+            errors.append("- Prezime je obavezno\n");
+        if (imeField.getText().trim().isEmpty())
+            errors.append("- Ime je obavezno\n");
         String mb = mbField.getText().trim();
         if (mb.isEmpty()) {
             errors.append("- MB/JMBG je obavezan\n");
         } else {
             var result = IdentifikatorValidator.validate(mb);
-            if (!result.isValid()) errors.append("- MB/JMBG nije validan: ").append(result.getMessage()).append("\n");
+            if (!result.isValid())
+                errors.append("- MB/JMBG nije validan: ").append(result.getMessage()).append("\n");
         }
 
         if (errors.length() > 0) {
@@ -570,10 +623,13 @@ public class PrimalacDetaljiScreen {
 
     /**
      * Proverava nesačuvane izmene i pita korisnika šta želi.
-     * @return true ako je OK da se nastavi (nema izmena, ili korisnik izabrao da snimi/odbaci)
+     * 
+     * @return true ako je OK da se nastavi (nema izmena, ili korisnik izabrao da
+     *         snimi/odbaci)
      */
     private boolean checkUnsavedBeforeReport() {
-        if (!hasUnsavedChanges) return true;
+        if (!hasUnsavedChanges)
+            return true;
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Nesačuvane izmene");
         alert.setHeaderText("Postoje nesačuvane izmene.");
@@ -583,16 +639,19 @@ public class PrimalacDetaljiScreen {
         ButtonType cancelBtn2 = new ButtonType("Otkaži", javafx.scene.control.ButtonBar.ButtonData.CANCEL_CLOSE);
         alert.getButtonTypes().setAll(saveBtn2, discardBtn, cancelBtn2);
         Optional<ButtonType> result = alert.showAndWait();
-        if (result.isEmpty() || result.get() == cancelBtn2) return false;
+        if (result.isEmpty() || result.get() == cancelBtn2)
+            return false;
         if (result.get() == saveBtn2) {
             saveData();
-            if (hasUnsavedChanges) return false; // save failed
+            if (hasUnsavedChanges)
+                return false; // save failed
         }
         return true;
     }
 
     private void doPppPo() {
-        if (!checkUnsavedBeforeReport()) return;
+        if (!checkUnsavedBeforeReport())
+            return;
         if (isNew || primalac.getIdZaposleni() == null) {
             showInfo("PPP-PO", "Primalac mora biti sačuvan pre generisanja PPP-PO potvrde.");
             return;
@@ -605,12 +664,14 @@ public class PrimalacDetaljiScreen {
         yearDialog.setHeaderText("Za koju godinu se generiše PPP-PO potvrda?");
         yearDialog.setContentText("Godina:");
         Optional<String> yearResult = yearDialog.showAndWait();
-        if (yearResult.isEmpty()) return;
+        if (yearResult.isEmpty())
+            return;
 
         int godina;
         try {
             godina = Integer.parseInt(yearResult.get().trim());
-            if (godina < 2000 || godina > 2100) throw new NumberFormatException();
+            if (godina < 2000 || godina > 2100)
+                throw new NumberFormatException();
         } catch (NumberFormatException e) {
             showError("Neispravna godina", "Unesite validnu godinu (npr. 2024).");
             return;
@@ -626,32 +687,42 @@ public class PrimalacDetaljiScreen {
             List<Obracun> sveStavke;
             List<ObracunDefinicija> definicije;
             Poslodavac poslodavac = null;
+            java.util.Map<String, String> grupaPoVpz = new java.util.HashMap<>();
 
             try (Connection conn = dbConn.getMainConnection()) {
+                for (rs.hbs.zarade.domain.VrstaPrihoda vp : new rs.hbs.zarade.db.VrstaPrihodaDao().findAll(conn)) {
+                    if (vp.getVpz() != null && vp.getGrupaSvr() != null)
+                        grupaPoVpz.put(vp.getVpz().trim(), vp.getGrupaSvr().trim());
+                }
                 sveStavke = new ObracunDao().findByLnkZap(conn, primalac.getIdZaposleni());
                 definicije = new ObracunDefinicijaDao().findAll(conn);
                 List<Poslodavac> poslodavci = new PoslodavacDao().findAll(conn);
-                if (!poslodavci.isEmpty()) poslodavac = poslodavci.get(0);
+                if (!poslodavci.isEmpty())
+                    poslodavac = poslodavci.get(0);
             }
 
             // Mapa definicija po ID-u za brzo pretraživanje
             java.util.Map<Integer, ObracunDefinicija> defMap = new java.util.HashMap<>();
             for (ObracunDefinicija d : definicije) {
-                if (d.getIdObracun() != null) defMap.put(d.getIdObracun(), d);
+                if (d.getIdObracun() != null)
+                    defMap.put(d.getIdObracun(), d);
             }
 
             // Filtriranje stavki za izabranu godinu
             String godinaStr = String.valueOf(godina);
             List<Obracun> stavkeZaGodinu = new ArrayList<>();
             for (Obracun o : sveStavke) {
-                if (o.getLnkObracun() == null) continue;
+                if (o.getLnkObracun() == null)
+                    continue;
                 ObracunDefinicija def = defMap.get(o.getLnkObracun());
-                if (def == null) continue;
+                if (def == null)
+                    continue;
                 String mesec = def.getMesec();
                 boolean uGodini = (mesec != null && mesec.startsWith(godinaStr))
                         || (mesec == null && def.getDatumObracuna() != null
-                            && def.getDatumObracuna().getYear() == godina);
-                if (uGodini) stavkeZaGodinu.add(o);
+                                && def.getDatumObracuna().getYear() == godina);
+                if (uGodini)
+                    stavkeZaGodinu.add(o);
             }
 
             if (stavkeZaGodinu.isEmpty()) {
@@ -672,7 +743,8 @@ public class PrimalacDetaljiScreen {
 
             File tempFile = File.createTempFile("PPP-PO_", ".pdf");
             tempFile.deleteOnExit();
-            PdfReporter.generatePppPoPotvrda(tempFile, primalac, opstinaNaziv, poslodavac, stavkeZaGodinu, godina);
+            PdfReporter.generatePppPoPotvrda(tempFile, primalac, opstinaNaziv, poslodavac, stavkeZaGodinu, godina,
+                    grupaPoVpz);
             showDocPreview(tempFile,
                     "PPP-PO_" + primalac.getPrezime() + "_" + primalac.getIme() + "_" + godina + ".pdf",
                     AppSettingsDao.KEY_PRIMALAC_PDF_PATH);
@@ -682,7 +754,8 @@ public class PrimalacDetaljiScreen {
     }
 
     private void doStampa() {
-        if (!checkUnsavedBeforeReport()) return;
+        if (!checkUnsavedBeforeReport())
+            return;
         if (isNew || primalac.getIdZaposleni() == null) {
             showInfo("Štampa", "Primalac mora biti sačuvan pre štampe.");
             return;
@@ -700,13 +773,14 @@ public class PrimalacDetaljiScreen {
     }
 
     /**
-     * Prikazuje pregled dokumenta sa opcijama: Otvori pregled, Štampaj, Sačuvaj PDF.
+     * Prikazuje pregled dokumenta sa opcijama: Otvori pregled, Štampaj, Sačuvaj
+     * PDF.
      */
     private void showDocPreview(File tempPdf, String defaultFileName, String settingsKey) {
         ButtonType previewType = new ButtonType("Otvori pregled");
-        ButtonType printType   = new ButtonType("Štampaj");
-        ButtonType saveType    = new ButtonType("Sačuvaj PDF...");
-        ButtonType cancelType  = new ButtonType("Otkaži", ButtonBar.ButtonData.CANCEL_CLOSE);
+        ButtonType printType = new ButtonType("Štampaj");
+        ButtonType saveType = new ButtonType("Sačuvaj PDF...");
+        ButtonType cancelType = new ButtonType("Otkaži", ButtonBar.ButtonData.CANCEL_CLOSE);
 
         Alert dialog = new Alert(Alert.AlertType.NONE);
         dialog.setTitle("Pregled dokumenta");
@@ -723,7 +797,8 @@ public class PrimalacDetaljiScreen {
                     FileChooser fc = new FileChooser();
                     fc.setTitle("Sačuvaj PDF");
                     File dir = AppSettingsDao.getExportDir(settingsKey);
-                    if (dir != null) fc.setInitialDirectory(dir);
+                    if (dir != null)
+                        fc.setInitialDirectory(dir);
                     fc.setInitialFileName(defaultFileName);
                     fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("PDF fajlovi", "*.pdf"));
                     File dest = fc.showSaveDialog(HbsZaradeApp.getPrimaryStage());
@@ -740,39 +815,51 @@ public class PrimalacDetaljiScreen {
     }
 
     private void markDirty() {
-        if (loading) return;
+        if (loading)
+            return;
         if (!hasUnsavedChanges) {
             hasUnsavedChanges = true;
             setHeaderColor(COLOR_DIRTY);
-            if (saveBtn != null) saveBtn.setDisable(false);
-            if (cancelBtn != null) cancelBtn.setDisable(false);
-            if (stampaBtn != null) stampaBtn.setDisable(true);
-        if (pppPoBtn != null) pppPoBtn.setDisable(true);
+            if (saveBtn != null)
+                saveBtn.setDisable(false);
+            if (cancelBtn != null)
+                cancelBtn.setDisable(false);
+            if (stampaBtn != null)
+                stampaBtn.setDisable(true);
+            if (pppPoBtn != null)
+                pppPoBtn.setDisable(true);
         }
     }
 
     private void markSaved() {
         hasUnsavedChanges = false;
         setHeaderColor(COLOR_SAVED);
-        if (saveBtn != null) saveBtn.setDisable(true);
-        if (cancelBtn != null) cancelBtn.setDisable(true);
-        if (stampaBtn != null) stampaBtn.setDisable(false);
-        if (pppPoBtn != null) pppPoBtn.setDisable(false);
+        if (saveBtn != null)
+            saveBtn.setDisable(true);
+        if (cancelBtn != null)
+            cancelBtn.setDisable(true);
+        if (stampaBtn != null)
+            stampaBtn.setDisable(false);
+        if (pppPoBtn != null)
+            pppPoBtn.setDisable(false);
     }
 
     private void validateMb(String value) {
         if (value == null || value.isEmpty()) {
-            mbField.setStyle("-fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;");
+            mbField.setStyle(
+                    "-fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;");
             mbValidationLabel.setText("");
             return;
         }
         var result = IdentifikatorValidator.validate(value);
         if (result.isValid()) {
-            mbField.setStyle("-fx-background-color: white; -fx-border-color: #1A7F37; -fx-border-width: 1.5; -fx-border-radius: 6; -fx-background-radius: 6;");
+            mbField.setStyle(
+                    "-fx-background-color: white; -fx-border-color: #1A7F37; -fx-border-width: 1.5; -fx-border-radius: 6; -fx-background-radius: 6;");
             mbValidationLabel.setTextFill(Color.web("#1A7F37"));
             mbValidationLabel.setText("✓ " + result.getMessage());
         } else {
-            mbField.setStyle("-fx-background-color: white; -fx-border-color: #CF222E; -fx-border-width: 1.5; -fx-border-radius: 6; -fx-background-radius: 6;");
+            mbField.setStyle(
+                    "-fx-background-color: white; -fx-border-color: #CF222E; -fx-border-width: 1.5; -fx-border-radius: 6; -fx-background-radius: 6;");
             mbValidationLabel.setTextFill(Color.web("#CF222E"));
             mbValidationLabel.setText("✗ " + result.getMessage());
         }
@@ -804,7 +891,9 @@ public class PrimalacDetaljiScreen {
         alert.getButtonTypes().setAll(otvoriBtn, ButtonType.OK);
         alert.showAndWait().ifPresent(btn -> {
             if (btn == otvoriBtn) {
-                try { java.awt.Desktop.getDesktop().open(file); } catch (Exception ex) {
+                try {
+                    java.awt.Desktop.getDesktop().open(file);
+                } catch (Exception ex) {
                     showError("Greška", "Ne mogu otvoriti fajl: " + ex.getMessage());
                 }
             }
@@ -830,9 +919,11 @@ public class PrimalacDetaljiScreen {
     /** Skroluje popup listu comboya do selektovane stavke. */
     private static <T> void scrollComboToSelected(ComboBox<T> combo) {
         T sel = combo.getValue();
-        if (sel == null) return;
+        if (sel == null)
+            return;
         int idx = combo.getItems().indexOf(sel);
-        if (idx < 0) return;
+        if (idx < 0)
+            return;
         javafx.stage.Stage mainStage = HbsZaradeApp.getPrimaryStage();
         for (Window w : Window.getWindows()) {
             if (w != mainStage && w.isShowing() && w.getScene() != null) {
