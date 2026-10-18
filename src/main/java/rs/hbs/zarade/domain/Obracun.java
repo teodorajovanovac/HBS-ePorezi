@@ -121,11 +121,41 @@ public class Obracun {
      * Poziva se pre snimanja u bazu.
      */
     public void rebuildSvp() {
+        // Stavke koje aplikacija sama pravi nemaju SVP-1/4/5: dopuni podrazumevanim vrednostima
+        if (!isBlank(svp2) && !isBlank(svp3)) {
+            if (isBlank(svp1)) svp1 = DEFAULT_SVP1;
+            if (isBlank(svp4)) svp4 = DEFAULT_SVP4;
+            if (isBlank(svp5)) svp5 = DEFAULT_SVP5;
+        }
+        this.svp = composeSvp(svp1, svp2, svp3, svp4, svp5);
+    }
+
+    // Podrazumevane vrednosti delova SVP (iz Access primera: 1 + 11 + 316 + 00 + 0 = 111316000)
+    public static final String DEFAULT_SVP1 = "1";
+    public static final String DEFAULT_SVP4 = "00";
+    public static final String DEFAULT_SVP5 = "0";
+
+    /**
+     * Spaja SVP iz delova SVP-1..SVP-5. Ako su zadati SVP-2 i SVP-3, nedostajući SVP-1, SVP-4
+     * i SVP-5 se dopunjuju podrazumevanim vrednostima (isto kao pri snimanju).
+     *
+     * @return spojena šifra, ili null ako nijedan deo nije zadat
+     */
+    public static String composeSvp(String s1, String s2, String s3, String s4, String s5) {
+        if (!isBlank(s2) && !isBlank(s3)) {
+            if (isBlank(s1)) s1 = DEFAULT_SVP1;
+            if (isBlank(s4)) s4 = DEFAULT_SVP4;
+            if (isBlank(s5)) s5 = DEFAULT_SVP5;
+        }
         StringBuilder sb = new StringBuilder();
-        for (String part : new String[]{svp1, svp2, svp3, svp4, svp5}) {
+        for (String part : new String[]{s1, s2, s3, s4, s5}) {
             if (part != null) sb.append(part.trim());
         }
-        this.svp = sb.length() > 0 ? sb.toString() : null;
+        return sb.length() > 0 ? sb.toString() : null;
+    }
+
+    private static boolean isBlank(String s) {
+        return s == null || s.trim().isEmpty();
     }
 
     // === GETTERI I SETTERI ===

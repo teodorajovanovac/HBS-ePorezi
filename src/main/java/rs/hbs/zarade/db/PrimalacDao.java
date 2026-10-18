@@ -28,13 +28,13 @@ public class PrimalacDao implements BaseDao<Primalac, Integer> {
     private static final String INSERT = "INSERT INTO " + TABLE_NAME +
             " (VrstaIdentifikatoraPrimaoca, VrstaPrimaocaID, Prezime, Ime, AdresaP, PBGradP," +
             " OznakaPrebivalista, MB, Telefon, Email, Mobilni, Status, ProcenatZaposlenja," +
-            " DatumAzuriranja)" +
-            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            " DatumAzuriranja, Napomena)" +
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     private static final String UPDATE = "UPDATE " + TABLE_NAME +
             " SET VrstaIdentifikatoraPrimaoca=?, VrstaPrimaocaID=?, Prezime=?, Ime=?," +
             " AdresaP=?, PBGradP=?, OznakaPrebivalista=?, MB=?, Telefon=?, Email=?," +
-            " Mobilni=?, Status=?, ProcenatZaposlenja=?, DatumAzuriranja=?" +
+            " Mobilni=?, Status=?, ProcenatZaposlenja=?, DatumAzuriranja=?, Napomena=?" +
             " WHERE IDZaposleni=?";
 
     @Override
@@ -86,7 +86,7 @@ public class PrimalacDao implements BaseDao<Primalac, Integer> {
     public void update(Connection connection, Primalac entity) throws SQLException {
         try (PreparedStatement stmt = connection.prepareStatement(UPDATE)) {
             bindParams(stmt, entity);
-            stmt.setInt(15, entity.getIdZaposleni());
+            stmt.setInt(16, entity.getIdZaposleni());
             stmt.executeUpdate();
         }
     }
@@ -95,7 +95,7 @@ public class PrimalacDao implements BaseDao<Primalac, Integer> {
      * Pomocna metoda - vezuje parametre za INSERT i UPDATE.
      * Redosled: VrstaIdentifikatoraPrimaoca, VrstaPrimaocaID, Prezime, Ime,
      *           AdresaP, PBGradP, OznakaPrebivalista, MB, Telefon, Email,
-     *           Mobilni, Status, ProcenatZaposlenja, DatumAzuriranja
+     *           Mobilni, Status, ProcenatZaposlenja, DatumAzuriranja, Napomena
      */
     private void bindParams(PreparedStatement stmt, Primalac p) throws SQLException {
         setIntOrNull(stmt, 1, p.getVrstaIdentifikatoraPrimaoca());
@@ -112,6 +112,7 @@ public class PrimalacDao implements BaseDao<Primalac, Integer> {
         setIntOrNull(stmt, 12, p.getStatus());
         setIntOrNull(stmt, 13, p.getProcenatZaposlenja());
         stmt.setTimestamp(14, Timestamp.valueOf(LocalDateTime.now()));
+        stmt.setString(15, p.getNapomena());
     }
 
     private void setIntOrNull(PreparedStatement stmt, int index, Integer value) throws SQLException {
@@ -124,8 +125,16 @@ public class PrimalacDao implements BaseDao<Primalac, Integer> {
 
     @Override
     public void delete(Connection connection, Integer id) throws SQLException {
-        // TODO: Implementirati DELETE
-        throw new UnsupportedOperationException("Delete nije jos implementiran");
+        // Brisanje je dozvoljeno samo ako primalac nema nijedan obracun
+        long brojObracuna = new ObracunDao().countByLnkZap(connection, id);
+        if (brojObracuna > 0) {
+            throw new SQLException("Primalac ima obračune (" + brojObracuna + ") i ne može biti obrisan.");
+        }
+        try (PreparedStatement stmt = connection.prepareStatement(
+                "DELETE FROM " + TABLE_NAME + " WHERE IDZaposleni = ?")) {
+            stmt.setInt(1, id);
+            stmt.executeUpdate();
+        }
     }
 
     @Override

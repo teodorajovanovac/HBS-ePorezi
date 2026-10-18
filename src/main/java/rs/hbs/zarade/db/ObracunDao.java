@@ -221,6 +221,26 @@ public class ObracunDao implements BaseDao<Obracun, Integer> {
     }
 
     /**
+     * Broji obracune (stavke) za datog primaoca.
+     *
+     * @param connection aktivna konekcija
+     * @param lnkZap ID primaoca (Primaoci.IDZaposleni)
+     * @return broj obracuna u kojima primalac ucestvuje
+     */
+    public long countByLnkZap(Connection connection, Integer lnkZap) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM " + TABLE_NAME + " WHERE lnkZap = ?";
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setInt(1, lnkZap);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getLong(1);
+                }
+            }
+        }
+        return 0;
+    }
+
+    /**
      * Učitava mapu gde je ključ lnkObracun (ID_Obracun definicije),
      * a vrednost skup svih SVP-3 kodova (vrste isplate/prihoda) koji se nalaze u tom obračunu.
      *

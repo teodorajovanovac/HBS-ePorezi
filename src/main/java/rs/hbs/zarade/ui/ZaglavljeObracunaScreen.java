@@ -34,6 +34,8 @@ public class ZaglavljeObracunaScreen {
     private static final String COLOR_DIRTY = "#9A6700"; // amber: nesačuvane izmene
     private static final String COLOR_SAVED = "#1A7F37"; // zelena: sačuvano
 
+    private static final DateTimeFormatter MESEC_FMT = DateTimeFormatter.ofPattern("yyyy-MM");
+
     private BorderPane root;
     private HBox header;
     private Button saveBtn;
@@ -116,15 +118,13 @@ public class ZaglavljeObracunaScreen {
         HBox footer = createFooter();
         root.setBottom(footer);
 
-        // Novi obračun: fokus odmah na naziv obračuna
-        if (createMode) {
-            root.sceneProperty().addListener((obs, oldScene, newScene) -> {
-                if (newScene != null) {
-                    javafx.application.Platform.runLater(() -> nazivField.requestFocus());
-                }
-            });
-            javafx.application.Platform.runLater(() -> nazivField.requestFocus());
-        }
+        // Po otvaranju (novi i postojeći obračun) fokus je odmah na nazivu obračuna
+        root.sceneProperty().addListener((obs, oldScene, newScene) -> {
+            if (newScene != null) {
+                javafx.application.Platform.runLater(() -> nazivField.requestFocus());
+            }
+        });
+        javafx.application.Platform.runLater(() -> nazivField.requestFocus());
     }
 
     private HBox createHeader() {
@@ -165,31 +165,33 @@ public class ZaglavljeObracunaScreen {
         }
 
         // Naziv obračuna
+        // Polja ispod nemaju inline stil: izgled i plavi okvir pri fokusu dolaze iz main.css
         nazivField = new TextField();
-        nazivField.setStyle("-fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;");
         nazivField.setPromptText("Unesite naziv obračuna");
 
         // Tip isplate (OVP)
         tipIsplateCombo = new ComboBox<>();
         loadVrstePrihoda();
         tipIsplateCombo.setMaxWidth(Double.MAX_VALUE);
-        tipIsplateCombo.setStyle("-fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-radius: 6;");
 
         // Mesec (YYYY-MM)
         mesecField = new TextField();
         mesecField.setPromptText("YYYY-MM (npr. 2025-11)");
-        mesecField.setStyle("-fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;");
 
         // Datum obračuna
         datumObracunaPicker = new DatePicker();
-        datumObracunaPicker.setStyle("-fx-background-color: white;");
         datumObracunaPicker.setMaxWidth(Double.MAX_VALUE);
 
         // Datum slanja
         datumSlanjaPicker = new DatePicker();
         datumSlanjaPicker.setMaxWidth(Double.MAX_VALUE);
-        rs.hbs.zarade.util.DateFormats.install(datumObracunaPicker);
+        // Datum slanja: "+1" = danas + 1 dan; datum obračuna: "+1" = datum slanja + 1 dan
+        rs.hbs.zarade.util.DateFormats.install(datumObracunaPicker, datumSlanjaPicker::getValue);
         rs.hbs.zarade.util.DateFormats.install(datumSlanjaPicker);
+        // Novi obračun: datum slanja je podrazumevano današnji datum
+        if (createMode) {
+            datumSlanjaPicker.setValue(LocalDate.now());
+        }
 
         // Oznaka (Konačna/Akontacija)
         oznakaKonacnaCombo = new ComboBox<>();
@@ -212,7 +214,6 @@ public class ZaglavljeObracunaScreen {
         // Poslodavac
         poslodavacCombo = new ComboBox<>();
         poslodavacCombo.setMaxWidth(Double.MAX_VALUE);
-        poslodavacCombo.setStyle("-fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-radius: 6;");
 
         // Brzo biranje kucanjem početnog slova
         ComboBoxHelper.makeSearchable(tipIsplateCombo);
@@ -224,9 +225,9 @@ public class ZaglavljeObracunaScreen {
                 createFieldRow("Šifra:", sifraField),
                 createFieldRow("Naziv obračuna: *", nazivField),
                 createFieldRow("Tip isplate: *", tipIsplateCombo),
-                createFieldRow("Mesec YYYY-MM: *", mesecField),
-                createFieldRow("Datum obračuna /plaćanja: *", datumObracunaPicker),
                 createFieldRow("Datum slanja ePPP-PD: *", datumSlanjaPicker),
+                createFieldRow("Datum obračuna /plaćanja: *", datumObracunaPicker),
+                createFieldRow("Mesec YYYY-MM: *", mesecField),
                 createFieldRow("Oznaka:", oznakaKonacnaCombo),
                 new Separator(),
                 createFieldRow("Broj dana:", brojDanaField),
@@ -235,6 +236,17 @@ public class ZaglavljeObracunaScreen {
                 new Separator(),
                 createFieldRow("Poslodavac: *", poslodavacCombo)
         );
+
+        // Mesec (YYYY-MM) se automatski popunjava iz datuma obračuna čim se vrednost unese/potvrdi
+        // (promena fokusa). Ne prepisuje mesec koji je korisnik ručno upisao.
+        datumObracunaPicker.valueProperty().addListener((obs, o, n) -> {
+            if (loading || n == null) return;
+            String trenutni = mesecField.getText();
+            String prethodniAuto = o != null ? o.format(MESEC_FMT) : null;
+            if (trenutni == null || trenutni.isBlank() || trenutni.equals(prethodniAuto)) {
+                mesecField.setText(n.format(MESEC_FMT));
+            }
+        });
 
         // Dirty tracking
         nazivField.textProperty().addListener((obs, o, n) -> markDirty());
@@ -303,6 +315,8 @@ public class ZaglavljeObracunaScreen {
         saveBtn.setOnMouseExited(e -> saveBtn.setStyle("-fx-background-color: #1A7F37; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 7 16; -fx-background-radius: 6; -fx-cursor: hand;"));
         saveBtn.setOnAction(e -> saveData());
         saveBtn.setDisable(!createMode);
+
+        FocusRing.install(saveBtn, cancelBtn, closeBtn);
 
         footer.getChildren().addAll(saveBtn, cancelBtn, spacer, closeBtn);
 
@@ -435,7 +449,7 @@ public class ZaglavljeObracunaScreen {
         tipIsplateCombo.setValue(null);
         mesecField.clear();
         datumObracunaPicker.setValue(null);
-        datumSlanjaPicker.setValue(null);
+        datumSlanjaPicker.setValue(LocalDate.now());
         oznakaKonacnaCombo.setValue("K - Konačna");
         brojDanaField.clear();
         brojSatiField.clear();

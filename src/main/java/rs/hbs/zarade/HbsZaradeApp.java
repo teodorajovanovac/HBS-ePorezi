@@ -4,6 +4,14 @@ import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
+import javafx.scene.input.KeyEvent;
+import javafx.stage.WindowEvent;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
@@ -40,10 +48,37 @@ public class HbsZaradeApp extends Application {
         if (icon == null) icon = createAppIcon();
         if (icon != null) primaryStage.getIcons().add(icon);
 
+        // Zatvaranje prozora (X, Alt+F4, Ctrl+F4) traži potvrdu. "Kraj rada" sa login
+        // ekrana poziva System.exit direktno, pa pitanje za njega ne važi.
+        primaryStage.setOnCloseRequest(event -> {
+            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+            confirm.initOwner(primaryStage);
+            confirm.setTitle("Zatvaranje programa");
+            confirm.setHeaderText("Da li ste sigurni da želite da zatvorite program?");
+            confirm.setContentText(null);
+            ButtonType yes = new ButtonType("Da, zatvori", ButtonBar.ButtonData.OK_DONE);
+            ButtonType no = new ButtonType("Ne", ButtonBar.ButtonData.CANCEL_CLOSE);
+            confirm.getButtonTypes().setAll(yes, no);
+            if (confirm.showAndWait().orElse(no) != yes) {
+                event.consume();
+            }
+        });
+
         // Pokaži login ekran
         showLoginScreen();
 
         primaryStage.show();
+    }
+
+    /** Ctrl+F4 se tretira kao zahtev za zatvaranje glavnog prozora (isti tok kao X). */
+    private static void installCloseShortcut(Scene scene) {
+        KeyCombination ctrlF4 = new KeyCodeCombination(KeyCode.F4, KeyCombination.CONTROL_DOWN);
+        scene.addEventFilter(KeyEvent.KEY_PRESSED, ev -> {
+            if (ctrlF4.match(ev)) {
+                ev.consume();
+                primaryStage.fireEvent(new WindowEvent(primaryStage, WindowEvent.WINDOW_CLOSE_REQUEST));
+            }
+        });
     }
 
     /** Učitava ikonu iz src/main/resources/icon.png ako postoji. */
@@ -89,6 +124,7 @@ public class HbsZaradeApp extends Application {
         boolean wasMaximized = primaryStage.isMaximized();
         Scene scene = new Scene(loginScreen.getRoot(), 1200, 800);
         scene.getStylesheets().add(HbsZaradeApp.class.getResource("/styles/main.css").toExternalForm());
+        installCloseShortcut(scene);
         primaryStage.setScene(scene);
         if (wasMaximized) Platform.runLater(() -> primaryStage.setMaximized(true));
     }
@@ -100,6 +136,7 @@ public class HbsZaradeApp extends Application {
         boolean wasMaximized = primaryStage.isMaximized();
         Scene scene = new Scene(layout.getRoot(), 1200, 800);
         scene.getStylesheets().add(HbsZaradeApp.class.getResource("/styles/main.css").toExternalForm());
+        installCloseShortcut(scene);
         primaryStage.setScene(scene);
         if (wasMaximized) Platform.runLater(() -> primaryStage.setMaximized(true));
     }

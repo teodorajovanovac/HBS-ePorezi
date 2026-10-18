@@ -634,6 +634,28 @@ public class PdfReporter {
                         Map<String, String> nazivPoVpz,
                         Map<Integer, Primalac> primaoci,
                         Poslodavac poslodavac) throws Exception {
+                generatePotvrdeObracuna(outputFile, stavke, nazivPoVpz, primaoci, poslodavac, POTVRDA_001);
+        }
+
+        /** Varijante potvrde (vrednost podešavanja PotvrdeReport). */
+        public static final String POTVRDA_001 = "Potvrda_001";
+        /** Dvojezična (srpski/engleski) varijanta, bez potpisa primaoca. */
+        public static final String POTVRDA_002 = "Potvrda_002";
+
+        /**
+         * Isto kao {@link #generatePotvrdeObracuna(File, List, Map, Map, Poslodavac)},
+         * uz izbor
+         * varijante potvrde; nepoznata ili prazna vrednost znači {@link #POTVRDA_001}.
+         *
+         * @param varijanta Potvrda_001 ili Potvrda_002
+         */
+        public static void generatePotvrdeObracuna(File outputFile,
+                        List<Obracun> stavke,
+                        Map<String, String> nazivPoVpz,
+                        Map<Integer, Primalac> primaoci,
+                        Poslodavac poslodavac,
+                        String varijanta) throws Exception {
+                boolean v2 = varijanta != null && POTVRDA_002.equalsIgnoreCase(varijanta.trim());
                 try (PdfWriter writer = new PdfWriter(outputFile);
                                 PdfDocument pdf = new PdfDocument(writer);
                                 Document doc = new Document(pdf, PageSize.A4)) {
@@ -649,13 +671,20 @@ public class PdfReporter {
                                         doc.add(new com.itextpdf.layout.element.AreaBreak(
                                                         com.itextpdf.layout.properties.AreaBreakType.NEXT_PAGE));
                                 prva = false;
-                                addPotvrdaStrana(doc, o, nazivPoVpz, primaoci.get(o.getLnkZap()), poslodavac);
+                                addPotvrdaStrana(doc, o, nazivPoVpz, primaoci.get(o.getLnkZap()), poslodavac, v2);
                         }
                 }
         }
 
+        /**
+         * Natpis potvrde: u dvojezičnoj varijanti "srpski /english", inače samo srpski.
+         */
+        private static String bi(boolean v2, String sr, String en) {
+                return v2 ? sr + " /" + en : sr;
+        }
+
         private static void addPotvrdaStrana(Document doc, Obracun o, Map<String, String> nazivPoVpz,
-                        Primalac primalac, Poslodavac poslodavac) {
+                        Primalac primalac, Poslodavac poslodavac, boolean v2) {
                 com.itextpdf.layout.borders.Border none = com.itextpdf.layout.borders.Border.NO_BORDER;
                 com.itextpdf.layout.borders.Border box = new com.itextpdf.layout.borders.SolidBorder(
                                 ColorConstants.BLACK, 1f);
@@ -669,7 +698,12 @@ public class PdfReporter {
                 // Zaglavlje: naziv isplatioca desno, linija ispod
                 doc.add(new Paragraph(poslodavacNaziv).setFontSize(9)
                                 .setTextAlignment(TextAlignment.RIGHT)
-                                .setBorderBottom(hair).setMarginBottom(24));
+                                .setBorderBottom(hair).setMarginBottom(v2 ? 14 : 24));
+
+                if (v2) {
+                        doc.add(new Paragraph("Obračun poreza /Tax Calculation").setFontSize(12).setBold()
+                                        .setTextAlignment(TextAlignment.CENTER).setMarginBottom(14));
+                }
 
                 // Naslov
                 doc.add(new Paragraph(nazivPrihoda).setFontSize(12).setBold()
@@ -683,7 +717,7 @@ public class PdfReporter {
                         jmbg = nvl(primalac.getMb());
 
                 Cell levo = new Cell().setBorder(none)
-                                .add(new Paragraph("Primalac prihoda").setFontSize(9).setMarginBottom(8))
+                                .add(boldIf(v2, new Paragraph("Primalac prihoda").setFontSize(9).setMarginBottom(8)))
                                 .add(new Paragraph((nvl(o.getPrezime()) + " " + nvl(o.getIme())).trim())
                                                 .setFontSize(10).setMarginLeft(14).setMarginBottom(0))
                                 .add(new Paragraph(adresa).setFontSize(10).setMarginLeft(14).setMarginBottom(0))
@@ -691,8 +725,9 @@ public class PdfReporter {
                                 .add(new Paragraph("JMBG:   " + jmbg).setFontSize(10).setMarginLeft(14)
                                                 .setMarginBottom(0));
 
-                Cell desno = new Cell().setBorder(none)
-                                .add(new Paragraph("Poslodavac").setFontSize(9).setMarginBottom(8))
+                // Blok "Poslodavac" je pomeren udesno za 2 cm (1 cm = 28,35 pt)
+                Cell desno = new Cell().setBorder(none).setPaddingLeft(2 * 28.35f)
+                                .add(boldIf(v2, new Paragraph("Poslodavac").setFontSize(9).setMarginBottom(8)))
                                 .add(new Paragraph(poslodavacNaziv).setFontSize(10).setMarginLeft(14)
                                                 .setMarginBottom(4))
                                 .add(new Paragraph(poslodavac != null ? nvl(poslodavac.getUlicaIBroj()) : "")
@@ -709,16 +744,17 @@ public class PdfReporter {
                 float[] w = { 5, 2, 2 };
                 Table vrsta = new Table(UnitValue.createPercentArray(w)).setWidth(UnitValue.createPercentValue(100))
                                 .setBorder(box);
-                vrsta.addCell(potvrdaCell("Vrsta obračuna", TextAlignment.LEFT, true, box, 0));
-                vrsta.addCell(potvrdaCell("Neto", TextAlignment.RIGHT, false, box, 0));
-                vrsta.addCell(potvrdaCell("Bruto", TextAlignment.RIGHT, false, box, 0));
+                vrsta.addCell(potvrdaCell(bi(v2, "Vrsta obračuna", "Type of calculation"), TextAlignment.LEFT, true,
+                                box, 0));
+                vrsta.addCell(potvrdaCell(bi(v2, "Neto", "Net amount"), TextAlignment.RIGHT, false, box, 0));
+                vrsta.addCell(potvrdaCell(bi(v2, "Bruto", "Gross amount"), TextAlignment.RIGHT, false, box, 0));
                 doc.add(vrsta);
 
                 Table stavka = new Table(UnitValue.createPercentArray(w)).setWidth(UnitValue.createPercentValue(100));
                 stavka.addCell(potvrdaCell(nazivPrihoda, TextAlignment.LEFT, false, none, 0.5f));
                 stavka.addCell(potvrdaCell(fmtDin(o.getNeto()), TextAlignment.RIGHT, false, none, 0.5f));
                 stavka.addCell(potvrdaCell(fmtDin(o.getBruto()), TextAlignment.RIGHT, false, none, 0.5f));
-                stavka.addCell(potvrdaCell("Ukupno", TextAlignment.LEFT, true, none, 0));
+                stavka.addCell(potvrdaCell(bi(v2, "Ukupno", "Total"), TextAlignment.LEFT, true, none, 0));
                 stavka.addCell(potvrdaCell(fmtDin(o.getNeto()), TextAlignment.RIGHT, true, none, 0));
                 stavka.addCell(potvrdaCell(fmtDin(o.getBruto()), TextAlignment.RIGHT, true, none, 0));
                 doc.add(stavka.setMarginBottom(36));
@@ -734,20 +770,22 @@ public class PdfReporter {
                         Table dh = new Table(UnitValue.createPercentArray(w4))
                                         .setWidth(UnitValue.createPercentValue(100))
                                         .setBorder(box);
-                        dh.addCell(potvrdaCell("Doprinosi na teret zaposlenog", TextAlignment.LEFT, true, box, 0));
-                        dh.addCell(potvrdaCell("Osnovica", TextAlignment.RIGHT, false, box, 0));
-                        dh.addCell(potvrdaCell("Procenat", TextAlignment.RIGHT, false, box, 0));
-                        dh.addCell(potvrdaCell("Iznos", TextAlignment.RIGHT, false, box, 0));
+                        dh.addCell(potvrdaCell(bi(v2, "Doprinosi na teret zaposlenog", "Employee contributions"),
+                                        TextAlignment.LEFT, true, box, 0));
+                        dh.addCell(potvrdaCell(bi(v2, "Osnovica", "Base"), TextAlignment.RIGHT, false, box, 0));
+                        dh.addCell(potvrdaCell(v2 ? "%" : "Procenat", TextAlignment.RIGHT, false, box, 0));
+                        dh.addCell(potvrdaCell(bi(v2, "Iznos", "Amount"), TextAlignment.RIGHT, false, box, 0));
                         doc.add(dh);
 
                         Table d = new Table(UnitValue.createPercentArray(w4))
                                         .setWidth(UnitValue.createPercentValue(100));
-                        addPotvrdaRed(d, "Doprinosi za PIO na teret zaposlenog", o.getOsnovicaDoprinosi(), o.getzPio(),
-                                        false);
-                        addPotvrdaRed(d, "Doprinosi za zdravstvo na teret zaposlenog", o.getOsnovicaDoprinosi(),
-                                        o.getzZdr(), false);
+                        addPotvrdaRed(d, bi(v2, "PIO", "Pension insurance"),
+                                        o.getOsnovicaDoprinosi(), o.getzPio(), false);
+                        addPotvrdaRed(d, bi(v2, "Zdravstveno osiguranje",
+                                        "Health insurance"), o.getOsnovicaDoprinosi(), o.getzZdr(), false);
                         // Linija iznad ukupnog reda (isto kao ispred "Ukupno" u tabeli Vrsta obračuna)
-                        d.addCell(potvrdaCell("Ukupno doprinosi na teret zaposlenog", TextAlignment.LEFT, true, none,
+                        d.addCell(potvrdaCell(bi(v2, "Ukupno doprinosi na teret zaposlenog",
+                                        "Total employee contributions"), TextAlignment.LEFT, true, none,
                                         0).setBorderTop(hair));
                         d.addCell(potvrdaCell("", TextAlignment.RIGHT, false, none, 0).setBorderTop(hair));
                         d.addCell(potvrdaCell("", TextAlignment.RIGHT, false, none, 0).setBorderTop(hair));
@@ -759,39 +797,56 @@ public class PdfReporter {
                 // Porez
                 Table ph = new Table(UnitValue.createPercentArray(w4)).setWidth(UnitValue.createPercentValue(100))
                                 .setBorder(box);
-                ph.addCell(potvrdaCell("Porez", TextAlignment.LEFT, true, box, 0));
-                ph.addCell(potvrdaCell("Osnovica", TextAlignment.RIGHT, false, box, 0));
-                ph.addCell(potvrdaCell("Procenat", TextAlignment.RIGHT, false, box, 0));
-                ph.addCell(potvrdaCell("Iznos", TextAlignment.RIGHT, false, box, 0));
+                ph.addCell(potvrdaCell(bi(v2, "Porez", "Tax"), TextAlignment.LEFT, true, box, 0));
+                ph.addCell(potvrdaCell(bi(v2, "Osnovica", "Base"), TextAlignment.RIGHT, false, box, 0));
+                ph.addCell(potvrdaCell(v2 ? "%" : "Procenat", TextAlignment.RIGHT, false, box, 0));
+                ph.addCell(potvrdaCell(bi(v2, "Iznos", "Amount"), TextAlignment.RIGHT, false, box, 0));
                 doc.add(ph);
 
                 Table p = new Table(UnitValue.createPercentArray(w4)).setWidth(UnitValue.createPercentValue(100));
-                p.addCell(potvrdaCell("Neoprezivi iznos", TextAlignment.LEFT, false, none, 0));
+                p.addCell(potvrdaCell(bi(v2, "Neoprezivi iznos", "Non-taxable amount"), TextAlignment.LEFT, false,
+                                none, 0));
                 p.addCell(potvrdaCell("", TextAlignment.RIGHT, false, none, 0));
                 p.addCell(potvrdaCell("", TextAlignment.RIGHT, false, none, 0));
                 p.addCell(potvrdaCell(fmtDin(o.getPoreskoOslobodjenje()), TextAlignment.RIGHT, false, none, 0));
-                addPotvrdaRed(p, "Porez na prihode", o.getOsnovicaPorez(), o.getPorez(), true);
+                addPotvrdaRed(p, bi(v2, "Porez na prihode", "Income tax"), o.getOsnovicaPorez(), o.getPorez(), true);
                 doc.add(p.setMarginBottom(18));
 
                 // Ukupni troškovi
                 Table uk = new Table(UnitValue.createPercentArray(new float[] { 7, 2 }))
-                                .setWidth(UnitValue.createPercentValue(100)).setBorder(box).setMarginBottom(48);
-                uk.addCell(potvrdaCell("Ukupno troškovi na teret zaposlenog (doprinosi + porez)",
+                                .setWidth(UnitValue.createPercentValue(100)).setBorder(box).setMarginBottom(24);
+                uk.addCell(potvrdaCell(
+                                v2 ? "Ukupno troškovi na teret zaposlenog (doprinosi + porez) /Total costs borne by the employee (contributions + tax)"
+                                                : "Ukupno troškovi na teret zaposlenog (doprinosi + porez)",
                                 TextAlignment.LEFT, true, box, 0));
                 uk.addCell(potvrdaCell(fmtDin(zPio.add(zZdr).add(porez)), TextAlignment.RIGHT, true, box, 0));
                 doc.add(uk);
 
                 // Potpisi
-                Table potpis = new Table(UnitValue.createPercentArray(new float[] { 1, 1 }))
-                                .setWidth(UnitValue.createPercentValue(100));
-                potpis.addCell(new Cell().setBorder(none).setTextAlignment(TextAlignment.CENTER)
-                                .add(new Paragraph("OBRAČUNAO").setFontSize(10).setMarginBottom(24))
-                                .add(new Paragraph("________________________").setFontSize(10)));
-                potpis.addCell(new Cell().setBorder(none).setTextAlignment(TextAlignment.CENTER)
-                                .add(new Paragraph("PRIMALAC PRIHODA").setFontSize(10).setMarginBottom(24))
-                                .add(new Paragraph("________________________").setFontSize(10)));
+                Table potpis;
+                if (v2) {
+                        // Samo "Obračunao", skroz levo, bez potpisa primaoca
+                        potpis = new Table(UnitValue.createPercentArray(new float[] { 1 }))
+                                        .setWidth(UnitValue.createPercentValue(40));
+                        potpis.addCell(new Cell().setBorder(none).setTextAlignment(TextAlignment.LEFT)
+                                        .add(new Paragraph("OBRAČUNAO").setFontSize(10).setMarginBottom(12))
+                                        .add(new Paragraph("________________________").setFontSize(10)));
+                } else {
+                        potpis = new Table(UnitValue.createPercentArray(new float[] { 1, 1 }))
+                                        .setWidth(UnitValue.createPercentValue(100));
+                        potpis.addCell(new Cell().setBorder(none).setTextAlignment(TextAlignment.CENTER)
+                                        .add(new Paragraph("OBRAČUNAO").setFontSize(10).setMarginBottom(24))
+                                        .add(new Paragraph("________________________").setFontSize(10)));
+                        potpis.addCell(new Cell().setBorder(none).setTextAlignment(TextAlignment.CENTER)
+                                        .add(new Paragraph("PRIMALAC PRIHODA").setFontSize(10).setMarginBottom(12))
+                                        .add(new Paragraph("________________________").setFontSize(10)));
+                }
                 doc.add(potvrdaSpacer());
                 doc.add(potpis);
+        }
+
+        private static Paragraph boldIf(boolean bold, Paragraph p) {
+                return bold ? p.setBold() : p;
         }
 
         private static Paragraph potvrdaSpacer() {

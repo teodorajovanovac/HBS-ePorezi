@@ -14,6 +14,8 @@ public class AppSettingsDao {
     public static final String KEY_XML_EXPORT_PATH   = "ObracunXmlExportPath";
     public static final String KEY_PRIMALAC_PDF_PATH = "PrimaocPdfPath";
     public static final String KEY_OBRACUN_PDF_PATH  = "ObracunPdfPath";
+    /** Varijanta potvrde obračuna: Potvrda_001 (podrazumevano) ili Potvrda_002. */
+    public static final String KEY_POTVRDE_REPORT    = "PotvrdeReport";
 
     /**
      * Čita vrednost jednog podešavanja.

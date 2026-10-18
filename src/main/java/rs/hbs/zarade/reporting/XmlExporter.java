@@ -58,6 +58,21 @@ public class XmlExporter {
                 buildXml(definicija, stavke, poslodavac).getBytes(StandardCharsets.UTF_8));
     }
 
+    /**
+     * Naziv XML fajla po šablonu {@code id_mesecYYYYMM_nazivobracuna.xml}.
+     * U nazivu obračuna se znaci {@code : \ . ,}, slova š đ č ć ž, razmak i ostali znakovi koji
+     * nisu dozvoljeni u nazivu fajla zamenjuju sa "-" (uzastopne crtice se spajaju u jednu).
+     */
+    public static String defaultFileName(ObracunDefinicija def) {
+        String id = def.getIdObracun() != null ? String.valueOf(def.getIdObracun()) : "";
+        String mesec = nvl(def.getMesec()).replace("-", "").trim();
+        String naziv = nvl(def.getNazivObracuna())
+                .replaceAll("[:\\\\.,šđčćžŠĐČĆŽ\\s/*?\"<>|]", "-")
+                .replaceAll("-{2,}", "-")
+                .replaceAll("^-|-$", "");
+        return id + "_" + mesec + "_" + naziv + ".xml";
+    }
+
     // -----------------------------------------------------------------------
     // Private implementation
     // -----------------------------------------------------------------------
@@ -131,7 +146,7 @@ public class XmlExporter {
         if (o.getSvp() != null && !o.getSvp().trim().isEmpty()) {
             return o.getSvp().trim();
         }
-        return nvl(o.getSvp1()) + nvl(o.getSvp2()) + nvl(o.getSvp3()) + nvl(o.getSvp4()) + nvl(o.getSvp5());
+        return nvl(Obracun.composeSvp(o.getSvp1(), o.getSvp2(), o.getSvp3(), o.getSvp4(), o.getSvp5()));
     }
 
     private static void tag(StringBuilder sb, String name, String value) {

@@ -71,6 +71,7 @@ public class PrimalacDetaljiScreen {
     private TextField mbField;
     private TextField mobilniField;
     private TextField emailField;
+    private TextField napomenaField;
     private ComboBox<String> statusCombo;
     private TextField procenatField;
     private ComboBox<VrstaPrimaoca> vrstaPrimaocaCombo;
@@ -88,6 +89,20 @@ public class PrimalacDetaljiScreen {
         loadLookupData();
         createUI();
         populateFields();
+    }
+
+    /**
+     * Novi primalac sa unapred popunjenim prezimenom i imenom (npr. iz polja za pretragu).
+     */
+    public PrimalacDetaljiScreen(String prezime, String ime) {
+        this((Primalac) null);
+        prezimeField.setText(prezime != null ? prezime : "");
+        imeField.setText(ime != null ? ime : "");
+    }
+
+    /** @return snimljeni primalac (sa ID-jem), ili null ako još nije snimljen */
+    public Primalac getSavedPrimalac() {
+        return !isNew && primalac.getIdZaposleni() != null ? primalac : null;
     }
 
     private void loadLookupData() {
@@ -115,6 +130,12 @@ public class PrimalacDetaljiScreen {
         root.setTop(header);
         HBox content = createFormContent();
         root.setCenter(content);
+        // Po otvaranju fokus je na prezimenu
+        root.sceneProperty().addListener((obs, oldScene, newScene) -> {
+            if (newScene != null)
+                javafx.application.Platform.runLater(() -> prezimeField.requestFocus());
+        });
+        javafx.application.Platform.runLater(() -> prezimeField.requestFocus());
         HBox footer = createFooter();
         root.setBottom(footer);
 
@@ -179,14 +200,14 @@ public class PrimalacDetaljiScreen {
         content.setPadding(new Insets(20));
         content.setAlignment(Pos.TOP_CENTER);
         VBox leftColumn = createLeftColumn();
-        VBox rightColumn = createRightColumn();
-        content.getChildren().addAll(leftColumn, rightColumn);
+        content.getChildren().add(leftColumn);
         return content;
     }
 
     private VBox createLeftColumn() {
         VBox column = new VBox(10);
-        column.setPrefWidth(550);
+        column.setPrefWidth(640);
+        column.setMaxWidth(760);
         column.setStyle("-fx-background-color: white; -fx-padding: 20; -fx-background-radius: 8; " +
                 "-fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 8;");
 
@@ -199,28 +220,21 @@ public class PrimalacDetaljiScreen {
         idField.setStyle(
                 "-fx-background-color: #F6F8FA; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6; -fx-text-fill: #848D97;");
 
+        // Polja nemaju inline stil: izgled i plavi okvir pri fokusu dolaze iz main.css
         prezimeField = new TextField();
-        prezimeField.setStyle(
-                "-fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;");
         prezimeField.setPromptText("Prezime primaoca");
 
         imeField = new TextField();
-        imeField.setStyle(
-                "-fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;");
         imeField.setPromptText("Ime primaoca");
 
         adresaField = new TextField();
-        adresaField.setStyle(
-                "-fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;");
+        adresaField.setPromptText("Ulica i broj");
 
         pbGradField = new TextField();
-        pbGradField.setStyle(
-                "-fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;");
+        pbGradField.setPromptText("Poštanski broj i naziv mesta");
 
         sifraOpstineCombo = new ComboBox<>();
         sifraOpstineCombo.setPrefWidth(100);
-        sifraOpstineCombo.setStyle(
-                "-fx-font-size: 13px; -fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-radius: 6;");
         for (Opstina o : opstine)
             sifraOpstineCombo.getItems().add(o);
         sifraOpstineCombo.setCellFactory(lv -> new ListCell<Opstina>() {
@@ -240,8 +254,6 @@ public class PrimalacDetaljiScreen {
 
         nazivOpstineCombo = new ComboBox<>();
         nazivOpstineCombo.setPrefWidth(200);
-        nazivOpstineCombo.setStyle(
-                "-fx-font-size: 13px; -fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-radius: 6;");
         for (Opstina o : opstine)
             nazivOpstineCombo.getItems().add(o);
         nazivOpstineCombo.setCellFactory(lv -> new ListCell<Opstina>() {
@@ -274,96 +286,30 @@ public class PrimalacDetaljiScreen {
         ComboBoxHelper.makeSearchable(sifraOpstineCombo, Opstina::getSifra);
 
         VBox mbBox = new VBox(4);
-        Label mbLabel = new Label("MB/JMBG: *");
-        mbLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
-        mbLabel.setStyle("-fx-text-fill: #0969DA;");
         mbField = new TextField();
-        mbField.setStyle(
-                "-fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;");
         mbValidationLabel = new Label();
         mbValidationLabel.setFont(Font.font("Segoe UI", 11));
         mbField.textProperty().addListener((obs, oldVal, newVal) -> validateMb(newVal));
-        mbBox.getChildren().addAll(mbLabel, mbField, mbValidationLabel);
+        mbBox.getChildren().addAll(mbField, mbValidationLabel);
 
         mobilniField = new TextField();
-        mobilniField.setStyle(
-                "-fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;");
 
         emailField = new TextField();
-        emailField.setStyle(
-                "-fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;");
 
-        HBox statusBox = new HBox(10);
-        statusBox.setAlignment(Pos.CENTER_LEFT);
-        Label statusLabel = new Label("Status:");
-        statusLabel.setPrefWidth(120);
-        statusLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
-        statusLabel.setStyle("-fx-text-fill: #57606A;");
+        // Napomena (kolona Napomena, kratak tekst do 255 karaktera)
+        napomenaField = new TextField();
+        napomenaField.setTextFormatter(new TextFormatter<String>(
+                change -> change.getControlNewText().length() <= 255 ? change : null));
+
         statusCombo = new ComboBox<>();
         statusCombo.getItems().addAll("Aktivan", "Neaktivan");
         statusCombo.setValue("Aktivan");
         ComboBoxHelper.makeSearchable(statusCombo);
-        statusBox.getChildren().addAll(statusLabel, statusCombo);
+        HBox statusBox = createFieldRow("Status:", statusCombo);
+        statusCombo.setMaxWidth(Region.USE_PREF_SIZE);
+        HBox.setHgrow(statusCombo, Priority.NEVER);
 
-        HBox opstinaRow = new HBox(10);
-        opstinaRow.setAlignment(Pos.CENTER_LEFT);
-        Label opstinaLabel = new Label("Opština:");
-        opstinaLabel.setPrefWidth(120);
-        opstinaLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
-        opstinaLabel.setStyle("-fx-text-fill: #57606A;");
-        opstinaRow.getChildren().addAll(opstinaLabel, sifraOpstineCombo, nazivOpstineCombo);
-
-        column.getChildren().addAll(
-                sectionLabel, new Separator(),
-                createFieldRow("ID:", idField),
-                createFieldRow("Prezime: *", prezimeField),
-                createFieldRow("Ime: *", imeField),
-                createFieldRow("Adresa:", adresaField),
-                createFieldRow("PB/Grad:", pbGradField),
-                opstinaRow, mbBox,
-                createFieldRow("Mobilni:", mobilniField),
-                createFieldRow("Email:", emailField),
-                statusBox);
-
-        // Dirty tracking
-        prezimeField.textProperty().addListener((obs, o, n) -> markDirty());
-        imeField.textProperty().addListener((obs, o, n) -> markDirty());
-        adresaField.textProperty().addListener((obs, o, n) -> markDirty());
-        pbGradField.textProperty().addListener((obs, o, n) -> markDirty());
-        mbField.textProperty().addListener((obs, o, n) -> markDirty());
-        mobilniField.textProperty().addListener((obs, o, n) -> markDirty());
-        emailField.textProperty().addListener((obs, o, n) -> markDirty());
-        sifraOpstineCombo.valueProperty().addListener((obs, o, n) -> markDirty());
-        statusCombo.valueProperty().addListener((obs, o, n) -> markDirty());
-
-        return column;
-    }
-
-    private VBox createRightColumn() {
-        VBox column = new VBox(10);
-        column.setPrefWidth(400);
-        column.setStyle("-fx-background-color: white; -fx-padding: 20; -fx-background-radius: 8; " +
-                "-fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 8;");
-
-        TabPane tabPane = new TabPane();
-        Tab zaposlenjeTab = new Tab("Zaposlenje");
-        zaposlenjeTab.setClosable(false);
-
-        VBox zaposlenjeContent = new VBox(15);
-        zaposlenjeContent.setPadding(new Insets(15));
-        zaposlenjeContent.setStyle("-fx-background-color: white;");
-        zaposlenjeContent.setMaxWidth(Double.MAX_VALUE);
-
-        HBox procenatBox = new HBox(10);
-        procenatBox.setAlignment(Pos.CENTER_LEFT);
-        Label procenatLabel = new Label("% zaposlenja:");
-        procenatLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
-        procenatLabel.setTextFill(Color.web("#57606A"));
-        procenatLabel.setPrefWidth(120);
-        procenatField = new TextField("100");
-        procenatField.setPrefWidth(60);
-        procenatBox.getChildren().addAll(procenatLabel, procenatField);
-
+        // Vrsta primaoca (obavezno)
         vrstaPrimaocaCombo = new ComboBox<>();
         vrstaPrimaocaCombo.setMaxWidth(Double.MAX_VALUE);
         vrstaPrimaocaCombo.setVisibleRowCount(13);
@@ -385,22 +331,50 @@ public class PrimalacDetaljiScreen {
         });
         ComboBoxHelper.makeSearchable(vrstaPrimaocaCombo, VrstaPrimaoca::getDisplayName);
 
-        Label vrstaPrimaocaLabel = new Label("Vrsta primaoca:");
-        vrstaPrimaocaLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
-        vrstaPrimaocaLabel.setTextFill(Color.web("#57606A"));
+        procenatField = new TextField("100");
+        procenatField.setPrefWidth(60);
+        HBox procenatRow = createFieldRow("% zaposlenja:", procenatField);
+        procenatField.setMaxWidth(80);
+        HBox.setHgrow(procenatField, Priority.NEVER);
 
-        zaposlenjeContent.getChildren().addAll(
-                procenatBox,
-                vrstaPrimaocaLabel,
-                vrstaPrimaocaCombo);
+        HBox opstinaRow = new HBox(10);
+        opstinaRow.setAlignment(Pos.CENTER_LEFT);
+        Label opstinaLabel = new Label("Opština: *");
+        opstinaLabel.setPrefWidth(130);
+        opstinaLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
+        opstinaLabel.setStyle("-fx-text-fill: #0969DA;");
+        opstinaRow.getChildren().addAll(opstinaLabel, sifraOpstineCombo, nazivOpstineCombo);
+
+        column.getChildren().addAll(
+                sectionLabel, new Separator(),
+                createFieldRow("ID:", idField),
+                createFieldRow("Prezime: *", prezimeField),
+                createFieldRow("Ime: *", imeField),
+                createFieldRow("Adresa:", adresaField),
+                createFieldRow("Mesto:", pbGradField),
+                opstinaRow,
+                createFieldRow("JMBG: *", mbBox),
+                createFieldRow("Mobilni:", mobilniField),
+                createFieldRow("Email:", emailField),
+                statusBox,
+                createFieldRow("Vrsta primaoca: *", vrstaPrimaocaCombo),
+                procenatRow,
+                createFieldRow("Napomena:", napomenaField));
 
         // Dirty tracking
+        prezimeField.textProperty().addListener((obs, o, n) -> markDirty());
+        imeField.textProperty().addListener((obs, o, n) -> markDirty());
+        adresaField.textProperty().addListener((obs, o, n) -> markDirty());
+        pbGradField.textProperty().addListener((obs, o, n) -> markDirty());
+        mbField.textProperty().addListener((obs, o, n) -> markDirty());
+        mobilniField.textProperty().addListener((obs, o, n) -> markDirty());
+        emailField.textProperty().addListener((obs, o, n) -> markDirty());
+        sifraOpstineCombo.valueProperty().addListener((obs, o, n) -> markDirty());
+        statusCombo.valueProperty().addListener((obs, o, n) -> markDirty());
         procenatField.textProperty().addListener((obs, o, n) -> markDirty());
         vrstaPrimaocaCombo.valueProperty().addListener((obs, o, n) -> markDirty());
+        napomenaField.textProperty().addListener((obs, o, n) -> markDirty());
 
-        zaposlenjeTab.setContent(zaposlenjeContent);
-        tabPane.getTabs().add(zaposlenjeTab);
-        column.getChildren().add(tabPane);
         return column;
     }
 
@@ -447,6 +421,36 @@ public class PrimalacDetaljiScreen {
                 "-fx-background-color: #0969DA; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 7 14; -fx-background-radius: 6; -fx-cursor: hand;"));
         stampaBtn.setOnAction(e -> doStampa());
 
+        // Obriši: skriven; Ctrl+Shift+Insert ga prikazuje/sakriva
+        Button deleteBtn = new Button("Obriši");
+        deleteBtn.setStyle(
+                "-fx-background-color: #CF222E; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 7 14; -fx-background-radius: 6; -fx-cursor: hand;");
+        deleteBtn.setOnMouseEntered(e -> deleteBtn.setStyle(
+                "-fx-background-color: #A40E26; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 7 14; -fx-background-radius: 6; -fx-cursor: hand;"));
+        deleteBtn.setOnMouseExited(e -> deleteBtn.setStyle(
+                "-fx-background-color: #CF222E; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 7 14; -fx-background-radius: 6; -fx-cursor: hand;"));
+        deleteBtn.setOnAction(e -> doObrisi());
+        deleteBtn.setVisible(false);
+        deleteBtn.setManaged(false);
+        javafx.scene.input.KeyCombination toggleCombo = new javafx.scene.input.KeyCodeCombination(
+                javafx.scene.input.KeyCode.INSERT,
+                javafx.scene.input.KeyCombination.SHIFT_DOWN,
+                javafx.scene.input.KeyCombination.CONTROL_DOWN);
+        javafx.event.EventHandler<javafx.scene.input.KeyEvent> toggleHandler = ev -> {
+            if (toggleCombo.match(ev)) {
+                boolean show = !deleteBtn.isVisible();
+                deleteBtn.setVisible(show);
+                deleteBtn.setManaged(show);
+                ev.consume();
+            }
+        };
+        root.sceneProperty().addListener((obs, oldScene, newScene) -> {
+            if (oldScene != null)
+                oldScene.removeEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, toggleHandler);
+            if (newScene != null)
+                newScene.addEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, toggleHandler);
+        });
+
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
@@ -474,7 +478,9 @@ public class PrimalacDetaljiScreen {
             }
         });
 
-        footer.getChildren().addAll(saveBtn, cancelBtn, pppPoBtn, stampaBtn, spacer, closeBtn);
+        FocusRing.install(saveBtn, cancelBtn, pppPoBtn, stampaBtn, deleteBtn, closeBtn);
+
+        footer.getChildren().addAll(saveBtn, cancelBtn, pppPoBtn, stampaBtn, deleteBtn, spacer, closeBtn);
         return footer;
     }
 
@@ -502,6 +508,7 @@ public class PrimalacDetaljiScreen {
                 mbField.setText(primalac.getMb() != null ? primalac.getMb() : "");
                 mobilniField.setText(primalac.getMobilni() != null ? primalac.getMobilni() : "");
                 emailField.setText(primalac.getEmail() != null ? primalac.getEmail() : "");
+                napomenaField.setText(primalac.getNapomena() != null ? primalac.getNapomena() : "");
 
                 // Status: 1=Aktivan, 0=Neaktivan
                 Integer status = primalac.getStatus();
@@ -560,6 +567,11 @@ public class PrimalacDetaljiScreen {
                 errors.append("- MB/JMBG nije validan: ").append(result.getMessage()).append("\n");
         }
 
+        if (sifraOpstineCombo.getValue() == null)
+            errors.append("- Opština je obavezna\n");
+        if (vrstaPrimaocaCombo.getValue() == null)
+            errors.append("- Vrsta primaoca je obavezna\n");
+
         if (errors.length() > 0) {
             showError("Validacija", "Popunite obavezna polja:\n\n" + errors.toString());
             return;
@@ -586,6 +598,8 @@ public class PrimalacDetaljiScreen {
 
         primalac.setMobilni(mobilniField.getText().trim());
         primalac.setEmail(emailField.getText().trim());
+        String napomena = napomenaField.getText().trim();
+        primalac.setNapomena(napomena.isEmpty() ? null : napomena);
 
         // Status
         primalac.setStatus("Neaktivan".equals(statusCombo.getValue()) ? 0 : 1);
@@ -647,6 +661,40 @@ public class PrimalacDetaljiScreen {
                 return false; // save failed
         }
         return true;
+    }
+
+    /** Brisanje primaoca; dozvoljeno samo ako primalac nema nijedan obračun. */
+    private void doObrisi() {
+        if (isNew || primalac.getIdZaposleni() == null) {
+            showInfo("Brisanje", "Primalac nije snimljen, pa nema šta da se briše.");
+            return;
+        }
+        try {
+            Connection conn = DatabaseConnection.getInstance().getMainConnection();
+            long brojObracuna = new ObracunDao().countByLnkZap(conn, primalac.getIdZaposleni());
+            if (brojObracuna > 0) {
+                showInfo("Brisanje nije dozvoljeno",
+                        "Primalac ima obračune (" + brojObracuna + "), pa se podaci ne mogu obrisati.");
+                return;
+            }
+            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+            confirm.setTitle("Brisanje primaoca");
+            confirm.setHeaderText("Obrisati primaoca " + primalac.getPrezime() + " " + primalac.getIme() + "?");
+            confirm.setContentText("Ova akcija je nepovratna.");
+            Optional<ButtonType> result = confirm.showAndWait();
+            if (result.isEmpty() || result.get() != ButtonType.OK)
+                return;
+
+            new PrimalacDao().delete(conn, primalac.getIdZaposleni());
+            hasUnsavedChanges = false; // ne pitaj za nesačuvane izmene pri zatvaranju
+            if (onClose != null) {
+                onClose.run();
+            } else {
+                HbsZaradeApp.navigateTo(new PrimaociListaScreen().getRoot());
+            }
+        } catch (SQLException e) {
+            showError("Greška pri brisanju", e.getMessage());
+        }
     }
 
     private void doPppPo() {

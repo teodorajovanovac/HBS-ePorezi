@@ -78,7 +78,7 @@ public class PrimaociListaScreen {
 
         filterField = new TextField();
         filterField.setPrefWidth(300);
-        filterField.setPromptText("Ime, prezime ili email...");
+        filterField.setPromptText("Ime, prezime, email ili napomena...");
         filterField.setStyle("-fx-background-color: white; -fx-font-size: 13px; " +
                 "-fx-border-color: #D0D7DE; -fx-border-radius: 6; -fx-border-width: 1; -fx-background-radius: 6; -fx-padding: 6 10;");
 
@@ -90,6 +90,7 @@ public class PrimaociListaScreen {
                     if (primalac.getPrezime() != null && primalac.getPrezime().toLowerCase().contains(f)) return true;
                     if (primalac.getIme() != null && primalac.getIme().toLowerCase().contains(f)) return true;
                     if (primalac.getEmail() != null && primalac.getEmail().toLowerCase().contains(f)) return true;
+                    if (primalac.getNapomena() != null && primalac.getNapomena().toLowerCase().contains(f)) return true;
                     return false;
                 });
             }

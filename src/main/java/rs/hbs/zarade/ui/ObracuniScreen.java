@@ -903,6 +903,24 @@ public class ObracuniScreen {
         ComboBoxHelper.makeSearchable(vrstaPrimaocaCombo, VrstaPrimaoca::getDisplayName);
         ComboBoxHelper.makeSearchable(vrstaPrihodaCombo, VrstaPrihoda::getDisplayName);
 
+        // SVP (samo za prikaz): spoj SVP-1..SVP-5, isto kao što se upisuje u bazu pri snimanju
+        Label svpLabel = new Label();
+        svpLabel.setStyle(
+                "-fx-background-color: #D4EFD9; -fx-padding: 5 10; -fx-border-color: #A8D5B5; -fx-border-width: 1; -fx-border-radius: 4; -fx-text-fill: #1A7F37; -fx-font-weight: bold; -fx-min-width: 180;");
+        Runnable refreshSvp = () -> {
+            String s2 = vrstaPrimaocaCombo.getValue() != null
+                    ? String.format("%02d", vrstaPrimaocaCombo.getValue().getId())
+                    : obracun.getSvp2();
+            String s3 = vrstaPrihodaCombo.getValue() != null ? vrstaPrihodaCombo.getValue().getVpz()
+                    : obracun.getSvp3();
+            String svp = Obracun.composeSvp(obracun.getSvp1(), s2, s3, obracun.getSvp4(), obracun.getSvp5());
+            svpLabel.setText(svp != null ? svp : "—");
+        };
+        refreshSvp.run();
+        netoField.textProperty().addListener((obs, o, n) -> refreshSvp.run());
+        vrstaPrimaocaCombo.valueProperty().addListener((obs, o, n) -> refreshSvp.run());
+        vrstaPrihodaCombo.valueProperty().addListener((obs, o, n) -> refreshSvp.run());
+
         TextField napomenaField = new TextField();
         napomenaField.setPromptText("Napomena za ovaj obračun...");
         napomenaField.setStyle(fieldStyle);
@@ -918,11 +936,13 @@ public class ObracuniScreen {
         grid.add(vrstaPrimaocaCombo, 1, 3);
         grid.add(new Label("Vrsta isplate:"), 0, 4);
         grid.add(vrstaPrihodaCombo, 1, 4);
-        grid.add(new Label("Napomena:"), 0, 5);
-        grid.add(napomenaField, 1, 5);
+        grid.add(new Label("SVP:"), 0, 5);
+        grid.add(svpLabel, 1, 5);
+        grid.add(new Label("Napomena:"), 0, 6);
+        grid.add(napomenaField, 1, 6);
 
         // Stil za labele
-        for (int i = 0; i <= 5; i++) {
+        for (int i = 0; i <= 6; i++) {
             Node lbl = getGridNode(grid, 0, i);
             if (lbl instanceof Label l) {
                 l.setStyle("-fx-font-weight: bold; -fx-text-fill: #57606A;");
@@ -1053,19 +1073,60 @@ public class ObracuniScreen {
             return;
         }
 
-        PrimalacDetaljiScreen screen = new PrimalacDetaljiScreen(primalac);
+        showPrimalacStage(new PrimalacDetaljiScreen(primalac), "Podaci primaoca",
+                HbsZaradeApp.getPrimaryStage());
+        tableView.refresh();
+    }
+
+    /** Prikazuje ekran primaoca u modalnom prozoru; "Zatvori" i X zatvaraju samo taj prozor. */
+    private void showPrimalacStage(PrimalacDetaljiScreen screen, String title, javafx.stage.Window owner) {
         javafx.stage.Stage stage = new javafx.stage.Stage();
-        stage.initOwner(HbsZaradeApp.getPrimaryStage());
+        stage.initOwner(owner);
         stage.initModality(javafx.stage.Modality.WINDOW_MODAL);
-        stage.setTitle("Podaci primaoca");
-        stage.setScene(new javafx.scene.Scene(screen.getRoot(), 960, 680));
+        stage.setTitle(title);
+        javafx.scene.Scene scene = new javafx.scene.Scene(screen.getRoot(), 960, 680);
+        scene.getStylesheets().add(HbsZaradeApp.class.getResource("/styles/main.css").toExternalForm());
+        stage.setScene(scene);
         screen.setOnClose(stage::close);
         stage.setOnCloseRequest(ev -> {
             if (!screen.confirmLeave())
                 ev.consume();
         });
         stage.showAndWait();
-        tableView.refresh();
+    }
+
+    /**
+     * Red sa poljem za pretragu i tasterom "+" za unos novog primaoca. Ukucani tekst se
+     * tumači kao "Prezime Ime" i popunjava formu novog primaoca; po snimanju se novi
+     * primalac dodaje u listu i selektuje.
+     */
+    private HBox createSearchRow(TextField searchField, ObservableList<Primalac> svePrimaoci,
+            ListView<Primalac> listView) {
+        Button newBtn = new Button("+");
+        newBtn.setStyle("-fx-background-color: #0969DA; -fx-text-fill: white; -fx-font-weight: bold; "
+                + "-fx-font-size: 14px; -fx-background-radius: 6; -fx-cursor: hand;");
+        newBtn.setTooltip(new Tooltip("Unesi novog primaoca"));
+        newBtn.setFocusTraversable(true);
+        newBtn.setOnAction(e -> {
+            String text = searchField.getText() == null ? "" : searchField.getText().trim();
+            String[] parts = text.split("\\s+", 2);
+            String prezime = parts.length > 0 ? parts[0] : "";
+            String ime = parts.length > 1 ? parts[1] : "";
+            PrimalacDetaljiScreen screen = new PrimalacDetaljiScreen(prezime, ime);
+            showPrimalacStage(screen, "Novi primalac prihoda", searchField.getScene().getWindow());
+            Primalac novi = screen.getSavedPrimalac();
+            if (novi != null) {
+                svePrimaoci.add(novi);
+                searchField.clear();
+                listView.getSelectionModel().select(novi);
+                listView.scrollTo(novi);
+                listView.requestFocus();
+            }
+        });
+        HBox row = new HBox(6, searchField, newBtn);
+        row.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(searchField, Priority.ALWAYS);
+        return row;
     }
 
     /** Pomoćna metoda za dohvat čvora iz GridPane po koloni i redu. */
@@ -1077,6 +1138,12 @@ public class ObracuniScreen {
                 return node;
         }
         return null;
+    }
+
+    /** Napomena primaoca za prikaz u listi izbora (prazno ako je nema). */
+    private static String napomenaSuffix(Primalac p) {
+        String n = p.getNapomena();
+        return n == null || n.isBlank() ? "" : " — " + n.trim();
     }
 
     /** Otvori dijalog za izbor primaoca (isti kao u openDodajPrimaoca). */
@@ -1106,7 +1173,8 @@ public class ObracuniScreen {
             @Override
             protected void updateItem(Primalac p, boolean empty) {
                 super.updateItem(p, empty);
-                setText(empty || p == null ? null : p.getPrezime() + " " + p.getIme() + " (" + p.getMb() + ")");
+                setText(empty || p == null ? null : p.getPrezime() + " " + p.getIme() + " (" + p.getMb() + ")"
+                        + napomenaSuffix(p));
             }
         });
 
@@ -1119,11 +1187,13 @@ public class ObracuniScreen {
                     return true;
                 return (p.getPrezime() != null && p.getPrezime().toLowerCase().contains(lower))
                         || (p.getIme() != null && p.getIme().toLowerCase().contains(lower))
-                        || (p.getMb() != null && p.getMb().contains(n.trim()));
+                        || (p.getMb() != null && p.getMb().contains(n.trim()))
+                        || (p.getNapomena() != null && p.getNapomena().toLowerCase().contains(lower));
             });
         });
 
-        dialog.getDialogPane().setContent(new VBox(8, searchField, listView));
+        dialog.getDialogPane().setContent(new VBox(8, createSearchRow(searchField, svePrimaoci, listView), listView));
+        dialog.setOnShown(e -> javafx.application.Platform.runLater(searchField::requestFocus));
         dialog.setResultConverter(btn -> btn == selectType ? listView.getSelectionModel().getSelectedItem() : null);
         return dialog.showAndWait().orElse(null);
     }
@@ -1170,13 +1240,13 @@ public class ObracuniScreen {
                     setText(null);
                 } else {
                     setText(item.getPrezime() + " " + item.getIme() +
-                            " (" + (item.getMb() != null ? item.getMb() : "-") + ")");
+                            " (" + (item.getMb() != null ? item.getMb() : "-") + ")" + napomenaSuffix(item));
                 }
             }
         });
 
         TextField searchField = new TextField();
-        searchField.setPromptText("Pretraži po prezimenu, imenu, JMBG...");
+        searchField.setPromptText("Pretraži po prezimenu, imenu, JMBG, napomeni...");
         searchField.setStyle("-fx-border-color: #D0D7DE; -fx-border-radius: 6; -fx-background-radius: 6;");
         searchField.textProperty().addListener((obs, o, n) -> {
             String lower = n == null ? "" : n.toLowerCase().trim();
@@ -1185,12 +1255,14 @@ public class ObracuniScreen {
                     return true;
                 return (p.getPrezime() != null && p.getPrezime().toLowerCase().contains(lower))
                         || (p.getIme() != null && p.getIme().toLowerCase().contains(lower))
-                        || (p.getMb() != null && p.getMb().contains(n.trim()));
+                        || (p.getMb() != null && p.getMb().contains(n.trim()))
+                        || (p.getNapomena() != null && p.getNapomena().toLowerCase().contains(lower));
             });
         });
 
-        VBox content = new VBox(8, searchField, listView);
+        VBox content = new VBox(8, createSearchRow(searchField, svePrimaoci, listView), listView);
         dialog.getDialogPane().setContent(content);
+        dialog.setOnShown(e -> javafx.application.Platform.runLater(searchField::requestFocus));
 
         dialog.setResultConverter(dialogButton -> {
             if (dialogButton == addButtonType) {
@@ -1325,7 +1397,12 @@ public class ObracuniScreen {
 
             java.io.File tempFile = java.io.File.createTempFile("potvrde_", ".pdf");
             tempFile.deleteOnExit();
-            PdfReporter.generatePotvrdeObracuna(tempFile, stavke, nazivPoVpz, primaoci, loadPoslodavac());
+            // Varijanta potvrde iz tabele settings (PotvrdeReport); prazno/nepoznato = Potvrda_001
+            String varijanta = conn != null
+                    ? new AppSettingsDao().getSetting(conn, AppSettingsDao.KEY_POTVRDE_REPORT)
+                    : null;
+            PdfReporter.generatePotvrdeObracuna(tempFile, stavke, nazivPoVpz, primaoci, loadPoslodavac(),
+                    varijanta);
             openPdfPreview(tempFile);
         } catch (Exception e) {
             showError("Greška", "Greška pri generisanju PDF: " + e.getMessage());
@@ -1421,7 +1498,7 @@ public class ObracuniScreen {
         // Ako je u Podešavanjima zadat folder za XML export, fajl se kreira automatski bez pregleda
         java.io.File xmlDir = AppSettingsDao.getExportDir(AppSettingsDao.KEY_XML_EXPORT_PATH);
         if (xmlDir != null) {
-            java.io.File file = new java.io.File(xmlDir, "obracun_" + selectedDef.getIdObracun() + ".xml");
+            java.io.File file = new java.io.File(xmlDir, XmlExporter.defaultFileName(selectedDef));
             try {
                 XmlExporter.exportToFile(file, selectedDef, obracuniData, poslodavac);
             } catch (Exception e) {
@@ -1453,7 +1530,7 @@ public class ObracuniScreen {
         if (result.isPresent() && result.get().getButtonData() == ButtonBar.ButtonData.OK_DONE) {
             FileChooser fileChooser = new FileChooser();
             fileChooser.setTitle("Sačuvaj XML");
-            fileChooser.setInitialFileName("obracun_" + selectedDef.getIdObracun() + ".xml");
+            fileChooser.setInitialFileName(XmlExporter.defaultFileName(selectedDef));
             fileChooser.getExtensionFilters().add(
                     new FileChooser.ExtensionFilter("XML fajlovi", "*.xml"));
             java.io.File file = fileChooser.showSaveDialog(HbsZaradeApp.getPrimaryStage());
