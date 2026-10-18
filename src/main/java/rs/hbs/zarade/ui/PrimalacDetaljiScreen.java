@@ -92,7 +92,8 @@ public class PrimalacDetaljiScreen {
     }
 
     /**
-     * Novi primalac sa unapred popunjenim prezimenom i imenom (npr. iz polja za pretragu).
+     * Novi primalac sa unapred popunjenim prezimenom i imenom (npr. iz polja za
+     * pretragu).
      */
     public PrimalacDetaljiScreen(String prezime, String ime) {
         this((Primalac) null);
@@ -129,7 +130,11 @@ public class PrimalacDetaljiScreen {
         header = createHeader();
         root.setTop(header);
         HBox content = createFormContent();
-        root.setCenter(content);
+        // Forma se skroluje, a footer (Snimi, Zatvori...) ostaje uvek vidljiv
+        ScrollPane scroll = new ScrollPane(content);
+        scroll.setFitToWidth(true);
+        scroll.setStyle("-fx-background: #F6F8FA; -fx-background-color: #F6F8FA;");
+        root.setCenter(scroll);
         // Po otvaranju fokus je na prezimenu
         root.sceneProperty().addListener((obs, oldScene, newScene) -> {
             if (newScene != null)
@@ -312,6 +317,8 @@ public class PrimalacDetaljiScreen {
         // Vrsta primaoca (obavezno)
         vrstaPrimaocaCombo = new ComboBox<>();
         vrstaPrimaocaCombo.setMaxWidth(Double.MAX_VALUE);
+        vrstaPrimaocaCombo.setMinWidth(0);
+        vrstaPrimaocaCombo.setPrefWidth(100); // širinu određuje HBox (Hgrow), ne najduži naziv
         vrstaPrimaocaCombo.setVisibleRowCount(13);
         for (VrstaPrimaoca vp : vrstePrimaoca)
             vrstaPrimaocaCombo.getItems().add(vp);
@@ -341,7 +348,8 @@ public class PrimalacDetaljiScreen {
         opstinaRow.setAlignment(Pos.CENTER_LEFT);
         Label opstinaLabel = new Label("Opština: *");
         opstinaLabel.setPrefWidth(130);
-        opstinaLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
+        opstinaLabel.setMinWidth(Region.USE_PREF_SIZE);
+        opstinaLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 12));
         opstinaLabel.setStyle("-fx-text-fill: #0969DA;");
         opstinaRow.getChildren().addAll(opstinaLabel, sifraOpstineCombo, nazivOpstineCombo);
 
@@ -918,7 +926,8 @@ public class PrimalacDetaljiScreen {
         row.setAlignment(Pos.CENTER_LEFT);
         Label label = new Label(labelText);
         label.setPrefWidth(130);
-        label.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
+        label.setMinWidth(Region.USE_PREF_SIZE); // labela se ne sme skupiti na "..."
+        label.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 12));
         if (labelText.contains("*")) {
             label.setStyle("-fx-text-fill: #0969DA;");
         } else {

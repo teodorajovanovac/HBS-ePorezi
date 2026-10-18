@@ -118,7 +118,7 @@ public class PodesavanjaScreen {
 
         VBox mainBox = new VBox(5);
         Label mainLabel = new Label("Glavna baza (data_zarade.mdb):");
-        mainLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
+        mainLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 12));
         mainLabel.setStyle("-fx-text-fill: #57606A;");
         dbMainPathField = new TextField();
         dbMainPathField.setEditable(false);
@@ -137,7 +137,7 @@ public class PodesavanjaScreen {
     private TextField createExportPathRow(VBox parent, String labelText) {
         VBox box = new VBox(5);
         Label lbl = new Label(labelText);
-        lbl.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
+        lbl.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 12));
         lbl.setStyle("-fx-text-fill: #57606A;");
         TextField field = new TextField();
         field.setStyle("-fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 5 10;");
@@ -168,14 +168,14 @@ public class PodesavanjaScreen {
 
         VBox minCenaBox = new VBox(5);
         Label minCenaLabel = new Label("Minimalna cena rada (RSD/sat):");
-        minCenaLabel.setFont(Font.font("System", FontWeight.BOLD, 12));
+        minCenaLabel.setFont(Font.font("System", FontWeight.NORMAL, 12));
         minCenaRadaField = new TextField();
         minCenaRadaField.setPromptText("npr. 271.00");
         minCenaBox.getChildren().addAll(minCenaLabel, minCenaRadaField);
 
         VBox poreskoBox = new VBox(5);
         Label poreskoLabel = new Label("Poresko oslobođenje (RSD):");
-        poreskoLabel.setFont(Font.font("System", FontWeight.BOLD, 12));
+        poreskoLabel.setFont(Font.font("System", FontWeight.NORMAL, 12));
         poreskoOslobodjenjeField = new TextField();
         poreskoOslobodjenjeField.setPromptText("npr. 25000.00");
         poreskoBox.getChildren().addAll(poreskoLabel, poreskoOslobodjenjeField);

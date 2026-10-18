@@ -655,6 +655,20 @@ public class PdfReporter {
                         Map<Integer, Primalac> primaoci,
                         Poslodavac poslodavac,
                         String varijanta) throws Exception {
+                generatePotvrdeObracuna(outputFile, stavke, nazivPoVpz, primaoci, poslodavac, varijanta, null);
+        }
+
+        /**
+         * @param definicije mapa ID_Obracun -> definicija obračuna (datum plaćanja, mesec,
+         *                   naziv za naslov Potvrda_002); može biti null
+         */
+        public static void generatePotvrdeObracuna(File outputFile,
+                        List<Obracun> stavke,
+                        Map<String, String> nazivPoVpz,
+                        Map<Integer, Primalac> primaoci,
+                        Poslodavac poslodavac,
+                        String varijanta,
+                        Map<Integer, ObracunDefinicija> definicije) throws Exception {
                 boolean v2 = varijanta != null && POTVRDA_002.equalsIgnoreCase(varijanta.trim());
                 try (PdfWriter writer = new PdfWriter(outputFile);
                                 PdfDocument pdf = new PdfDocument(writer);
@@ -671,7 +685,8 @@ public class PdfReporter {
                                         doc.add(new com.itextpdf.layout.element.AreaBreak(
                                                         com.itextpdf.layout.properties.AreaBreakType.NEXT_PAGE));
                                 prva = false;
-                                addPotvrdaStrana(doc, o, nazivPoVpz, primaoci.get(o.getLnkZap()), poslodavac, v2);
+                                ObracunDefinicija def = definicije != null ? definicije.get(o.getLnkObracun()) : null;
+                                addPotvrdaStrana(doc, o, nazivPoVpz, primaoci.get(o.getLnkZap()), poslodavac, v2, def);
                         }
                 }
         }
@@ -684,7 +699,7 @@ public class PdfReporter {
         }
 
         private static void addPotvrdaStrana(Document doc, Obracun o, Map<String, String> nazivPoVpz,
-                        Primalac primalac, Poslodavac poslodavac, boolean v2) {
+                        Primalac primalac, Poslodavac poslodavac, boolean v2, ObracunDefinicija def) {
                 com.itextpdf.layout.borders.Border none = com.itextpdf.layout.borders.Border.NO_BORDER;
                 com.itextpdf.layout.borders.Border box = new com.itextpdf.layout.borders.SolidBorder(
                                 ColorConstants.BLACK, 1f);
@@ -701,13 +716,28 @@ public class PdfReporter {
                                 .setBorderBottom(hair).setMarginBottom(v2 ? 14 : 24));
 
                 if (v2) {
-                        doc.add(new Paragraph("Obračun poreza /Tax Calculation").setFontSize(12).setBold()
+                        // Prvi naslov: srpski i engleski, u dva reda, manjim fontom
+                        doc.add(new Paragraph("Potvrda o obračunatom porezu i doprinosima na druge prihode")
+                                        .setFontSize(10).setBold()
+                                        .setTextAlignment(TextAlignment.CENTER).setMarginBottom(0));
+                        doc.add(new Paragraph("Certificate of Tax and Contributions Withholding on Other Income")
+                                        .setFontSize(10).setBold()
                                         .setTextAlignment(TextAlignment.CENTER).setMarginBottom(14));
-                }
 
-                // Naslov
-                doc.add(new Paragraph(nazivPrihoda).setFontSize(12).setBold()
-                                .setTextAlignment(TextAlignment.CENTER).setMarginBottom(36));
+                        // Drugi naslov: Datum plaćanja | Mesec (YYYYMM) /Naslov obračuna
+                        String datum = def != null && def.getDatumObracuna() != null
+                                        ? def.getDatumObracuna().format(DATE_FMT)
+                                        : "";
+                        String mesec = def != null ? nvl(def.getMesec()).replace("-", "") : "";
+                        String naslovObracuna = def != null ? nvl(def.getNazivObracuna()) : "";
+                        doc.add(new Paragraph("Datum plaćanja: " + datum + " | Mesec: " + mesec + " /"
+                                        + naslovObracuna).setFontSize(12).setBold()
+                                        .setTextAlignment(TextAlignment.CENTER).setMarginBottom(36));
+                } else {
+                        // Naslov
+                        doc.add(new Paragraph(nazivPrihoda).setFontSize(12).setBold()
+                                        .setTextAlignment(TextAlignment.CENTER).setMarginBottom(36));
+                }
 
                 // Primalac prihoda / Poslodavac
                 String adresa = primalac != null ? nvl(primalac.getAdresaP()) : "";
@@ -824,23 +854,11 @@ public class PdfReporter {
 
                 // Potpisi
                 Table potpis;
-                if (v2) {
-                        // Samo "Obračunao", skroz levo, bez potpisa primaoca
-                        potpis = new Table(UnitValue.createPercentArray(new float[] { 1 }))
-                                        .setWidth(UnitValue.createPercentValue(40));
-                        potpis.addCell(new Cell().setBorder(none).setTextAlignment(TextAlignment.LEFT)
-                                        .add(new Paragraph("OBRAČUNAO").setFontSize(10).setMarginBottom(12))
-                                        .add(new Paragraph("________________________").setFontSize(10)));
-                } else {
-                        potpis = new Table(UnitValue.createPercentArray(new float[] { 1, 1 }))
-                                        .setWidth(UnitValue.createPercentValue(100));
-                        potpis.addCell(new Cell().setBorder(none).setTextAlignment(TextAlignment.CENTER)
-                                        .add(new Paragraph("OBRAČUNAO").setFontSize(10).setMarginBottom(24))
-                                        .add(new Paragraph("________________________").setFontSize(10)));
-                        potpis.addCell(new Cell().setBorder(none).setTextAlignment(TextAlignment.CENTER)
-                                        .add(new Paragraph("PRIMALAC PRIHODA").setFontSize(10).setMarginBottom(12))
-                                        .add(new Paragraph("________________________").setFontSize(10)));
-                }
+                potpis = new Table(UnitValue.createPercentArray(new float[] { 1 }))
+                                .setWidth(UnitValue.createPercentValue(40));
+                potpis.addCell(new Cell().setBorder(none).setTextAlignment(TextAlignment.LEFT)
+                                .add(new Paragraph("OBRAČUNAO").setFontSize(10).setMarginBottom(12))
+                                .add(new Paragraph("________________________").setFontSize(10)));
                 doc.add(potvrdaSpacer());
                 doc.add(potpis);
         }

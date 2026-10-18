@@ -245,7 +245,8 @@ public class ObracuniScreen {
         tableView = createTable();
         tableView.setMinWidth(0);
 
-        // Wrapper daje desni razmak i dozvoljava tabeli da se skuplja kad prozor nije maksimiziran
+        // Wrapper daje desni razmak i dozvoljava tabeli da se skuplja kad prozor nije
+        // maksimiziran
         StackPane tableWrap = new StackPane(tableView);
         tableWrap.setPadding(new Insets(0, 16, 0, 0));
         tableWrap.setMinWidth(0);
@@ -415,7 +416,8 @@ public class ObracuniScreen {
                 "-fx-background-color: #1A7F37; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-cursor: hand;"));
         autoObradaBtn.setOnAction(e -> runAutomatskaObrada());
 
-        // Taster je skriven; Shift+Ctrl+Insert ga prikazuje/sakriva (važi dok je ovaj ekran u sceni)
+        // Taster je skriven; Shift+Ctrl+Insert ga prikazuje/sakriva (važi dok je ovaj
+        // ekran u sceni)
         autoObradaBtn.setVisible(false);
         autoObradaBtn.setManaged(false);
         javafx.scene.input.KeyCombination toggleCombo = new javafx.scene.input.KeyCodeCombination(
@@ -503,7 +505,8 @@ public class ObracuniScreen {
         closeBtn.setOnAction(e -> AppLayout.showWelcome());
 
         buttonsBox.getChildren().addAll(
-                autoObradaBtn, izvestajPojedinacniBtn, potvrdeBtn, xmlBtn, spacer, dodajPrimaocaBtn, newObracunBtn, closeBtn);
+                autoObradaBtn, izvestajPojedinacniBtn, potvrdeBtn, xmlBtn, spacer, dodajPrimaocaBtn, newObracunBtn,
+                closeBtn);
 
         footer.getChildren().addAll(sumeBox, new Separator(), buttonsBox);
         return footer;
@@ -903,7 +906,8 @@ public class ObracuniScreen {
         ComboBoxHelper.makeSearchable(vrstaPrimaocaCombo, VrstaPrimaoca::getDisplayName);
         ComboBoxHelper.makeSearchable(vrstaPrihodaCombo, VrstaPrihoda::getDisplayName);
 
-        // SVP (samo za prikaz): spoj SVP-1..SVP-5, isto kao što se upisuje u bazu pri snimanju
+        // SVP (samo za prikaz): spoj SVP-1..SVP-5, isto kao što se upisuje u bazu pri
+        // snimanju
         Label svpLabel = new Label();
         svpLabel.setStyle(
                 "-fx-background-color: #D4EFD9; -fx-padding: 5 10; -fx-border-color: #A8D5B5; -fx-border-width: 1; -fx-border-radius: 4; -fx-text-fill: #1A7F37; -fx-font-weight: bold; -fx-min-width: 180;");
@@ -945,7 +949,7 @@ public class ObracuniScreen {
         for (int i = 0; i <= 6; i++) {
             Node lbl = getGridNode(grid, 0, i);
             if (lbl instanceof Label l) {
-                l.setStyle("-fx-font-weight: bold; -fx-text-fill: #57606A;");
+                l.setStyle("-fx-text-fill: #57606A;");
                 l.setMinWidth(120);
             }
         }
@@ -1043,7 +1047,8 @@ public class ObracuniScreen {
                 dao.save(conn, obracun);
             }
             dao.update(conn, obracun);
-            if (!conn.getAutoCommit()) conn.commit();
+            if (!conn.getAutoCommit())
+                conn.commit();
         } catch (Exception ex) {
             showError("Greška", "Snimanje stavke nije uspelo: " + ex.getMessage());
             return false;
@@ -1054,7 +1059,10 @@ public class ObracuniScreen {
         return true;
     }
 
-    /** Otvara podatke primaoca stavke u modalnom prozoru (isti ekran kao u listi primalaca). */
+    /**
+     * Otvara podatke primaoca stavke u modalnom prozoru (isti ekran kao u listi
+     * primalaca).
+     */
     private void openPodaciPrimaoca(Obracun stavka) {
         if (stavka == null || stavka.getLnkZap() == null) {
             showInfo("Info", "Stavka nema povezanog primaoca.");
@@ -1078,13 +1086,18 @@ public class ObracuniScreen {
         tableView.refresh();
     }
 
-    /** Prikazuje ekran primaoca u modalnom prozoru; "Zatvori" i X zatvaraju samo taj prozor. */
+    /**
+     * Prikazuje ekran primaoca u modalnom prozoru; "Zatvori" i X zatvaraju samo taj
+     * prozor.
+     */
     private void showPrimalacStage(PrimalacDetaljiScreen screen, String title, javafx.stage.Window owner) {
         javafx.stage.Stage stage = new javafx.stage.Stage();
         stage.initOwner(owner);
         stage.initModality(javafx.stage.Modality.WINDOW_MODAL);
         stage.setTitle(title);
-        javafx.scene.Scene scene = new javafx.scene.Scene(screen.getRoot(), 960, 680);
+        // Visina ne sme preći ekran, da footer ne ispadne van vidljivog dela
+        double maxH = javafx.stage.Screen.getPrimary().getVisualBounds().getHeight() - 40;
+        javafx.scene.Scene scene = new javafx.scene.Scene(screen.getRoot(), 960, Math.min(800, maxH));
         scene.getStylesheets().add(HbsZaradeApp.class.getResource("/styles/main.css").toExternalForm());
         stage.setScene(scene);
         screen.setOnClose(stage::close);
@@ -1096,8 +1109,10 @@ public class ObracuniScreen {
     }
 
     /**
-     * Red sa poljem za pretragu i tasterom "+" za unos novog primaoca. Ukucani tekst se
-     * tumači kao "Prezime Ime" i popunjava formu novog primaoca; po snimanju se novi
+     * Red sa poljem za pretragu i tasterom "+" za unos novog primaoca. Ukucani
+     * tekst se
+     * tumači kao "Prezime Ime" i popunjava formu novog primaoca; po snimanju se
+     * novi
      * primalac dodaje u listu i selektuje.
      */
     private HBox createSearchRow(TextField searchField, ObservableList<Primalac> svePrimaoci,
@@ -1173,8 +1188,9 @@ public class ObracuniScreen {
             @Override
             protected void updateItem(Primalac p, boolean empty) {
                 super.updateItem(p, empty);
-                setText(empty || p == null ? null : p.getPrezime() + " " + p.getIme() + " (" + p.getMb() + ")"
-                        + napomenaSuffix(p));
+                setText(empty || p == null ? null
+                        : p.getPrezime() + " " + p.getIme() + " (" + p.getMb() + ")"
+                                + napomenaSuffix(p));
             }
         });
 
@@ -1379,7 +1395,9 @@ public class ObracuniScreen {
         prikaziPotvrde(obracuniData);
     }
 
-    /** Generiše PDF potvrda (jedna strana po stavci) i odmah ga otvara u pregledu. */
+    /**
+     * Generiše PDF potvrda (jedna strana po stavci) i odmah ga otvara u pregledu.
+     */
     private void prikaziPotvrde(List<Obracun> stavke) {
         try {
             java.util.Map<String, String> nazivPoVpz = new java.util.HashMap<>();
@@ -1389,7 +1407,8 @@ public class ObracuniScreen {
             java.util.Map<Integer, Primalac> primaoci = new java.util.HashMap<>();
             Connection conn = DatabaseConnection.getInstance().getMainConnection();
             if (conn != null) {
-                // Naslov iz IzvestajPrihodi (veza OVP3 = SVP-3) ima prednost nad nazivom iz šifarnika
+                // Naslov iz IzvestajPrihodi (veza OVP3 = SVP-3) ima prednost nad nazivom iz
+                // šifarnika
                 nazivPoVpz.putAll(new IzvestajPrihodiDao().findNaslovPoOvp3(conn));
                 for (Primalac p : new PrimalacDao().findAll(conn))
                     primaoci.put(p.getIdZaposleni(), p);
@@ -1397,19 +1416,26 @@ public class ObracuniScreen {
 
             java.io.File tempFile = java.io.File.createTempFile("potvrde_", ".pdf");
             tempFile.deleteOnExit();
-            // Varijanta potvrde iz tabele settings (PotvrdeReport); prazno/nepoznato = Potvrda_001
+            // Varijanta potvrde iz tabele settings (PotvrdeReport); prazno/nepoznato =
+            // Potvrda_001
             String varijanta = conn != null
                     ? new AppSettingsDao().getSetting(conn, AppSettingsDao.KEY_POTVRDE_REPORT)
                     : null;
+            java.util.Map<Integer, ObracunDefinicija> definicije = new java.util.HashMap<>();
+            ObracunDefinicija izabrana = getSelectedDefinicija();
+            if (izabrana != null)
+                definicije.put(izabrana.getIdObracun(), izabrana);
             PdfReporter.generatePotvrdeObracuna(tempFile, stavke, nazivPoVpz, primaoci, loadPoslodavac(),
-                    varijanta);
+                    varijanta, definicije);
             openPdfPreview(tempFile);
         } catch (Exception e) {
             showError("Greška", "Greška pri generisanju PDF: " + e.getMessage());
         }
     }
 
-    /** Odmah otvara PDF u podrazumevanom pregledaču (bez dijaloga za izbor akcije). */
+    /**
+     * Odmah otvara PDF u podrazumevanom pregledaču (bez dijaloga za izbor akcije).
+     */
     private void openPdfPreview(java.io.File pdf) {
         try {
             java.awt.Desktop.getDesktop().open(pdf);
@@ -1495,7 +1521,8 @@ public class ObracuniScreen {
             return;
         }
 
-        // Ako je u Podešavanjima zadat folder za XML export, fajl se kreira automatski bez pregleda
+        // Ako je u Podešavanjima zadat folder za XML export, fajl se kreira automatski
+        // bez pregleda
         java.io.File xmlDir = AppSettingsDao.getExportDir(AppSettingsDao.KEY_XML_EXPORT_PATH);
         if (xmlDir != null) {
             java.io.File file = new java.io.File(xmlDir, XmlExporter.defaultFileName(selectedDef));
@@ -1545,7 +1572,9 @@ public class ObracuniScreen {
         }
     }
 
-    /** Poruka da je XML kreiran, sa opcijom da se otvori folder i selektuje fajl. */
+    /**
+     * Poruka da je XML kreiran, sa opcijom da se otvori folder i selektuje fajl.
+     */
     private void showXmlCreated(java.io.File file) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("XML Export");

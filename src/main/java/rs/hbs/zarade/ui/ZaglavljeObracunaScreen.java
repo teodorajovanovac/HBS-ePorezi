@@ -269,7 +269,7 @@ public class ZaglavljeObracunaScreen {
 
         Label label = new Label(labelText);
         label.setPrefWidth(160);
-        label.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
+        label.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 12));
         if (labelText.contains("*")) {
             label.setStyle("-fx-text-fill: #0969DA;");
         } else {
