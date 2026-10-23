@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
  * Pojedinacni obracun za jednog primaoca prihoda.
  *
  * Mapira se na tabelu: Obracun (37 kolona)
- * Baza: data_zarade.mdb (Main DB) ili obracun-honorara.mdb (Calc DB)
+ * Baza: data_zarade.mdb (Main DB)
  *
  * Ovo je CENTRALNA tabela sistema - sadrzi sve izracunate vrednosti:
  * - NETO (ulazni podatak)

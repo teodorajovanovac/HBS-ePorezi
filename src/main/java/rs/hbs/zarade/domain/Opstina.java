@@ -3,7 +3,7 @@ package rs.hbs.zarade.domain;
 /**
  * Opština (šifarnik).
  * Mapira se na tabelu: SFR_OPSTINA
- * Baza: data_zarade.mdb (Main DB) ili aj_fn_cmn.mdb (Common DB)
+ * Baza: data_zarade.mdb (Main DB)
  */
 public class Opstina {
 

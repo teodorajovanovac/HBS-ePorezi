@@ -7,7 +7,7 @@ import java.time.LocalDate;
  * Definicija obracuna - grupise vise pojedinacnih obracuna.
  *
  * Mapira se na tabelu: ObracunDef (18 kolona)
- * Baza: data_zarade.mdb (Main DB) ili obracun-honorara.mdb (Calc DB)
+ * Baza: data_zarade.mdb (Main DB)
  *
  * Jedan ObracunDef moze imati vise Obracun zapisa (1:N relacija)
  */

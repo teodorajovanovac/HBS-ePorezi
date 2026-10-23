@@ -26,17 +26,13 @@ public class Main {
             System.out.println("[1] Ucitavanje konfiguracije...");
             DatabaseConfig config = DatabaseConfig.load();
             System.out.println("    OK: Konfiguracija ucitana");
-            System.out.println("    - Common DB: " + config.getCommonDbPath());
             System.out.println("    - Main DB:   " + config.getMainDbPath());
-            System.out.println("    - Calc DB:   " + config.getCalcDbPath());
             System.out.println();
 
             DatabaseConnection dbConnection = new DatabaseConnection(config);
 
-            // 2. Test konekcije ka svakoj bazi
-            testDatabaseConnection(dbConnection, "Common (aj_fn_cmn.mdb)", () -> dbConnection.getCommonConnection());
+            // 2. Test konekcije ka bazi
             testDatabaseConnection(dbConnection, "Main (data_zarade.mdb)", () -> dbConnection.getMainConnection());
-            testDatabaseConnection(dbConnection, "Calc (obracun-honorara.mdb)", () -> dbConnection.getCalcConnection());
 
             System.out.println();
             System.out.println("==============================================");
@@ -51,9 +47,7 @@ public class Main {
             System.err.println("Proverite da postoji fajl 'app.local.properties' u root-u projekta");
             System.err.println("sa sledecim sadrzajem:");
             System.err.println();
-            System.err.println("  db.common.path=stari_access/db/aj_fn_cmn.mdb");
             System.err.println("  db.main.path=stari_access/db/data_zarade.mdb");
-            System.err.println("  db.calc.path=stari_access/db/obracun-honorara.mdb");
             System.exit(1);
         }
     }

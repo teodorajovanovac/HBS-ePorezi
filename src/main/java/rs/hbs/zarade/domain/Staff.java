@@ -1,7 +1,7 @@
 package rs.hbs.zarade.domain;
 
 /**
- * Korisnik sistema — tabela Staff iz aj_fn_cmn.mdb.
+ * Korisnik sistema — tabela Staff iz data_zarade.mdb.
  *
  * Level vrednosti:
  *   3 = Pregledanje (ne koristi se aktivno)

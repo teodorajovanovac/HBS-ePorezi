@@ -17,4 +17,12 @@ java -version
 
 .\gradlew.bat test --info
 
+## Komiple
 
+.\gradlew.bat installDist
+ build\install\ePorezi\ 
+
+.\gradlew.bat jar
+build\libs\hbs-zarade-1.0-SNAPSHOT.jar
+
+app.local.properties

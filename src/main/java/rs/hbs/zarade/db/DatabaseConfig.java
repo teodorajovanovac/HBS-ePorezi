@@ -14,28 +14,18 @@ import java.util.Properties;
 /**
  * Konfiguracija baze podataka.
  *
- * Ucitava putanje do Access baza iz app.local.properties fajla.
- * Prema CLAUDE.md, koriste se tri baze:
- * - aj_fn_cmn.mdb (common/shared baza)
- * - data_zarade.mdb (glavna poslovna baza)
- * - obracun-honorara.mdb (baza obracuna)
+ * Ucitava putanju do Access baze (data_zarade.mdb) iz app.local.properties fajla.
  */
 public class DatabaseConfig {
 
     private static final String CONFIG_FILE = "app.local.properties";
 
-    private static final String KEY_DB_COMMON = "db.common.path";
     private static final String KEY_DB_MAIN = "db.main.path";
-    private static final String KEY_DB_CALC = "db.calc.path";
 
-    private final String commonDbPath;
     private final String mainDbPath;
-    private final String calcDbPath;
 
-    private DatabaseConfig(String commonDbPath, String mainDbPath, String calcDbPath) {
-        this.commonDbPath = commonDbPath;
+    private DatabaseConfig(String mainDbPath) {
         this.mainDbPath = mainDbPath;
-        this.calcDbPath = calcDbPath;
     }
 
     /**
@@ -69,10 +59,8 @@ public class DatabaseConfig {
                             "  - Trenutni folder: " + Paths.get(".").toAbsolutePath().normalize() + "\n" +
                             "  - Parent folder: " + Paths.get("..").toAbsolutePath().normalize() + "\n" +
                             "  - Pored JAR fajla\n\n" +
-                            "Kreirajte fajl sa putanjama do baza:\n" +
-                            "  db.common.path=C:\\putanja\\do\\aj_fn_cmn.mdb (ili npr. db\\aj_fn_cmn.mdb)\n" +
-                            "  db.main.path=C:\\putanja\\do\\data_zarade.mdb\n" +
-                            "  db.calc.path=C:\\putanja\\do\\obracun-honorara.mdb"
+                            "Kreirajte fajl sa putanjom do baze:\n" +
+                            "  db.main.path=C:\\putanja\\do\\data_zarade.mdb (ili npr. db\\data_zarade.mdb)"
             );
         }
 
@@ -91,27 +79,7 @@ public class DatabaseConfig {
         Path mainPath = resolveDatabasePath(rawMain, configDir);
         validateDatabaseFile(mainPath, KEY_DB_MAIN, rawMain);
 
-        // common i calc su opcioni — ne moraju biti konfigurisani
-        String rawCommon = props.getProperty(KEY_DB_COMMON, "").trim();
-        String rawCalc = props.getProperty(KEY_DB_CALC, "").trim();
-
-        Path commonPath = null;
-        if (!rawCommon.isEmpty()) {
-            commonPath = resolveDatabasePath(rawCommon, configDir);
-            validateDatabaseFile(commonPath, KEY_DB_COMMON, rawCommon);
-        }
-
-        Path calcPath = null;
-        if (!rawCalc.isEmpty()) {
-            calcPath = resolveDatabasePath(rawCalc, configDir);
-            validateDatabaseFile(calcPath, KEY_DB_CALC, rawCalc);
-        }
-
-        return new DatabaseConfig(
-                commonPath != null ? commonPath.toString() : "",
-                mainPath.toString(),
-                calcPath != null ? calcPath.toString() : ""
-        );
+        return new DatabaseConfig(mainPath.toString());
     }
 
     /**
@@ -291,13 +259,6 @@ public class DatabaseConfig {
     }
 
     /**
-     * @return Putanja do common/shared baze (aj_fn_cmn.mdb)
-     */
-    public String getCommonDbPath() {
-        return commonDbPath;
-    }
-
-    /**
      * @return Putanja do glavne poslovne baze (data_zarade.mdb)
      */
     public String getMainDbPath() {
@@ -305,33 +266,10 @@ public class DatabaseConfig {
     }
 
     /**
-     * @return Putanja do baze obracuna (obracun-honorara.mdb)
-     */
-    public String getCalcDbPath() {
-        return calcDbPath;
-    }
-
-    /**
-     * @return JDBC URL za common bazu, ili null ako nije konfigurisana
-     */
-    public String getCommonJdbcUrl() {
-        if (commonDbPath == null || commonDbPath.isEmpty()) return null;
-        return buildJdbcUrl(commonDbPath);
-    }
-
-    /**
      * @return JDBC URL za glavnu bazu
      */
     public String getMainJdbcUrl() {
         return buildJdbcUrl(mainDbPath);
-    }
-
-    /**
-     * @return JDBC URL za bazu obracuna, ili null ako nije konfigurisana
-     */
-    public String getCalcJdbcUrl() {
-        if (calcDbPath == null || calcDbPath.isEmpty()) return null;
-        return buildJdbcUrl(calcDbPath);
     }
 
     private String buildJdbcUrl(String dbPath) {
@@ -342,9 +280,7 @@ public class DatabaseConfig {
     @Override
     public String toString() {
         return "DatabaseConfig{" +
-                "commonDbPath='" + commonDbPath + '\'' +
-                ", mainDbPath='" + mainDbPath + '\'' +
-                ", calcDbPath='" + calcDbPath + '\'' +
+                "mainDbPath='" + mainDbPath + '\'' +
                 '}';
     }
 }

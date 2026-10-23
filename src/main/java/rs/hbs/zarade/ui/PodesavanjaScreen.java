@@ -1,5 +1,9 @@
 package rs.hbs.zarade.ui;
 
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
+import javafx.collections.transformation.SortedList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -12,11 +16,13 @@ import rs.hbs.zarade.db.AppSettingsDao;
 import rs.hbs.zarade.db.DatabaseConfig;
 import rs.hbs.zarade.db.DatabaseConnection;
 import rs.hbs.zarade.db.StaffDao;
+import rs.hbs.zarade.domain.AppSetting;
 import rs.hbs.zarade.domain.Staff;
 
 import java.sql.Connection;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 
 /**
  * Podešavanja sistema - Screen 18 iz UI specifikacije.
@@ -37,6 +43,11 @@ public class PodesavanjaScreen {
 
     // Korisnici
     private TableView<Staff> korisniciTable;
+
+    // Settings tabela
+    private TextField settingsSearchField;
+    private TableView<AppSetting> settingsTable;
+    private final ObservableList<AppSetting> settingsData = FXCollections.observableArrayList();
 
     // Footer i praćenje nesačuvanih izmena
     private Button saveBtn;
@@ -93,8 +104,186 @@ public class PodesavanjaScreen {
         korisniciTab.setClosable(false);
         korisniciTab.setContent(createKorisniciTab());
 
-        tabPane.getTabs().addAll(putanjeTab, konstanteTab, korisniciTab);
+        Tab settingsTab = new Tab("Settings");
+        settingsTab.setClosable(false);
+        settingsTab.setContent(createSettingsTab());
+
+        tabPane.getTabs().addAll(putanjeTab, konstanteTab, korisniciTab, settingsTab);
         return tabPane;
+    }
+
+    private VBox createSettingsTab() {
+        VBox content = new VBox(12);
+        content.setPadding(new Insets(30));
+        content.setStyle("-fx-background-color: white;");
+
+        Label titleLabel = new Label("Tabela Settings");
+        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
+        titleLabel.setTextFill(Color.web("#1F2328"));
+
+        settingsSearchField = new TextField();
+        settingsSearchField.setPromptText("Pretraga (naziv, vrednost, opis, kategorija, MFF)...");
+        settingsSearchField.setStyle("-fx-background-color: white; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 5 10;");
+
+        Button addBtn = new Button("Novi red");
+        addBtn.setStyle("-fx-background-color: #0969DA; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 6 14; -fx-background-radius: 6; -fx-cursor: hand;");
+        addBtn.setOnAction(e -> showSettingDialog(null));
+
+        Button refreshBtn = new Button("Osveži");
+        refreshBtn.setStyle("-fx-background-color: white; -fx-text-fill: #57606A; -fx-font-size: 13px; -fx-padding: 6 14; -fx-background-radius: 6; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-cursor: hand;");
+        refreshBtn.setOnAction(e -> loadSettingsTable());
+
+        HBox toolbar = new HBox(10, settingsSearchField, addBtn, refreshBtn);
+        toolbar.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(settingsSearchField, Priority.ALWAYS);
+
+        settingsTable = new TableView<>();
+        settingsTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        settingsTable.setPlaceholder(new Label("Nema podataka"));
+        // ID kolona je Integer da bi sortiranje bilo numeričko, a ne tekstualno
+        TableColumn<AppSetting, Integer> idCol = new TableColumn<>("ID");
+        idCol.setCellValueFactory(data -> new javafx.beans.property.SimpleObjectProperty<>(data.getValue().getIdSettings()));
+        idCol.setPrefWidth(50);
+        idCol.setStyle("-fx-alignment: CENTER-RIGHT;");
+
+        settingsTable.getColumns().addAll(List.of(
+                idCol,
+                settingsColumn("SettingName", 180, AppSetting::getSettingName),
+                settingsColumn("SettingVal", 220, AppSetting::getSettingVal),
+                settingsColumn("Description", 220, AppSetting::getDescription),
+                settingsColumn("Category", 110, AppSetting::getCategory),
+                settingsColumn("MFF", 80, AppSetting::getMff)
+        ));
+
+        FilteredList<AppSetting> filtered = new FilteredList<>(settingsData, s -> true);
+        settingsSearchField.textProperty().addListener((obs, o, n) ->
+                filtered.setPredicate(s -> s.matches(n)));
+        SortedList<AppSetting> sorted = new SortedList<>(filtered);
+        sorted.comparatorProperty().bind(settingsTable.comparatorProperty());
+        settingsTable.setItems(sorted);
+
+        settingsTable.setRowFactory(tv -> {
+            TableRow<AppSetting> row = new TableRow<>();
+            row.setOnMouseClicked(e -> {
+                if (e.getClickCount() == 2 && !row.isEmpty()) {
+                    showSettingDialog(row.getItem());
+                }
+            });
+            return row;
+        });
+        VBox.setVgrow(settingsTable, Priority.ALWAYS);
+
+        Label infoLabel = new Label("Dupli klik na red otvara izmenu.");
+        infoLabel.setStyle("-fx-text-fill: #666;");
+
+        content.getChildren().addAll(titleLabel, toolbar, settingsTable, infoLabel);
+        return content;
+    }
+
+    private TableColumn<AppSetting, String> settingsColumn(String title, double width,
+                                                           Function<AppSetting, String> getter) {
+        TableColumn<AppSetting, String> col = new TableColumn<>(title);
+        col.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(getter.apply(data.getValue())));
+        col.setPrefWidth(width);
+        return col;
+    }
+
+    private void loadSettingsTable() {
+        if (settingsTable == null) return;
+        try {
+            DatabaseConnection dbConn = DatabaseConnection.getInstance();
+            if (dbConn == null) return;
+            try (Connection conn = dbConn.getMainConnection()) {
+                settingsData.setAll(new AppSettingsDao().findAll(conn));
+            }
+        } catch (Exception e) {
+            System.err.println("Greška pri učitavanju Settings tabele: " + e.getMessage());
+            showInfo("Greška", "Nije moguće učitati tabelu Settings: " + e.getMessage());
+        }
+    }
+
+    /** Popup za unos (existing == null) ili izmenu reda iz tabele Settings. */
+    private void showSettingDialog(AppSetting existing) {
+        boolean isNew = existing == null;
+
+        Dialog<AppSetting> dialog = new Dialog<>();
+        dialog.setTitle(isNew ? "Novi red" : "Izmena podešavanja");
+        dialog.setHeaderText(isNew ? "Unos novog reda u tabelu Settings"
+                                   : "IDSettings: " + existing.getIdSettings());
+
+        ButtonType saveType = new ButtonType("Snimi", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(saveType, ButtonType.CANCEL);
+
+        TextField nameField = new TextField(isNew ? "" : nvl(existing.getSettingName()));
+        TextArea valArea = new TextArea(isNew ? "" : nvl(existing.getSettingVal()));
+        valArea.setPrefRowCount(3);
+        valArea.setWrapText(true);
+        TextArea descArea = new TextArea(isNew ? "" : nvl(existing.getDescription()));
+        descArea.setPrefRowCount(3);
+        descArea.setWrapText(true);
+        TextField categoryField = new TextField(isNew ? "" : nvl(existing.getCategory()));
+        TextField mffField = new TextField(isNew ? "" : nvl(existing.getMff()));
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(16));
+        grid.setPrefWidth(520);
+        ColumnConstraints c0 = new ColumnConstraints();
+        ColumnConstraints c1 = new ColumnConstraints();
+        c1.setHgrow(Priority.ALWAYS);
+        grid.getColumnConstraints().addAll(c0, c1);
+
+        int r = 0;
+        if (!isNew) {
+            TextField idField = new TextField(String.valueOf(existing.getIdSettings()));
+            idField.setEditable(false);
+            idField.setStyle("-fx-background-color: #F6F8FA; -fx-text-fill: #848D97;");
+            grid.addRow(r++, new Label("IDSettings:"), idField);
+        }
+        grid.addRow(r++, new Label("SettingName:"), nameField);
+        grid.addRow(r++, new Label("SettingVal:"), valArea);
+        grid.addRow(r++, new Label("Description:"), descArea);
+        grid.addRow(r++, new Label("Category:"), categoryField);
+        grid.addRow(r, new Label("MFF:"), mffField);
+        dialog.getDialogPane().setContent(grid);
+
+        // SettingName je obavezno polje
+        Button saveButton = (Button) dialog.getDialogPane().lookupButton(saveType);
+        saveButton.disableProperty().bind(nameField.textProperty().isEmpty());
+        javafx.application.Platform.runLater(nameField::requestFocus);
+
+        dialog.setResultConverter(bt -> {
+            if (bt != saveType) return null;
+            AppSetting s = isNew ? new AppSetting() : existing;
+            s.setSettingName(nameField.getText().trim());
+            s.setSettingVal(valArea.getText());
+            s.setDescription(descArea.getText());
+            s.setCategory(categoryField.getText().trim());
+            s.setMff(mffField.getText().trim());
+            return s;
+        });
+
+        Optional<AppSetting> result = dialog.showAndWait();
+        result.ifPresent(s -> {
+            try {
+                DatabaseConnection dbConn = DatabaseConnection.getInstance();
+                if (dbConn == null) { showInfo("Greška", "Baza nije dostupna."); return; }
+                try (Connection conn = dbConn.getMainConnection()) {
+                    AppSettingsDao dao = new AppSettingsDao();
+                    if (isNew) dao.insert(conn, s); else dao.update(conn, s);
+                }
+            } catch (Exception e) {
+                showInfo("Greška", "Greška pri snimanju: " + e.getMessage());
+            }
+            // Uvek ponovo učitaj (i posle greške, da tabela ne prikazuje nesnimljene izmene).
+            // Putanje u tabu "Putanje" se čitaju iz iste tabele, pa i njih osveži ako nisu menjane.
+            if (hasUnsavedChanges) loadSettingsTable(); else loadSettings();
+        });
+    }
+
+    private static String nvl(String s) {
+        return s != null ? s : "";
     }
 
     private VBox createPutanjeTab() {
@@ -408,6 +597,7 @@ public class PodesavanjaScreen {
         poreskoOslobodjenjeField.setText("25000.00");
 
         loadKorisnici();
+        loadSettingsTable();
     }
 
     private void loadKorisnici() {

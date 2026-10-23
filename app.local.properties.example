@@ -20,11 +20,5 @@
 # Aplikacija automatski prepoznaje da li je u pitanju relativna ili apsolutna putanja.
 # =============================================================
 
-# Common/Shared baza (pomocne tabele, zajednicke sifre)
-db.common.path=stari_access\db\aj_fn_cmn.mdb
-
 # Glavna poslovna baza (primaoci, isplatioci, sifarnici)
 db.main.path=stari_access\db\data_zarade.mdb
-
-# Baza obracuna (obracuni i stavke obracuna)
-db.calc.path=stari_access\db\obracun-honorara.mdb

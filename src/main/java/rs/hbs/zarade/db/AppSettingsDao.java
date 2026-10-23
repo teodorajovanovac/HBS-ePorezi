@@ -4,10 +4,14 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+
+import rs.hbs.zarade.domain.AppSetting;
 
 /**
- * DAO za tabelu 'settings' u data_zarade.mdb.
- * Tabela: settings (settingName VARCHAR, settingVal VARCHAR)
+ * DAO za tabelu 'Settings' u data_zarade.mdb.
+ * Tabela: Settings (IDSettings AUTONUMBER, SettingName, SettingVal, Descrition, Category, MFF)
  */
 public class AppSettingsDao {
 
@@ -52,6 +56,56 @@ public class AppSettingsDao {
                 }
             }
         }
+    }
+
+    /**
+     * Vraća sve redove tabele Settings, sortirano po IDSettings.
+     */
+    public List<AppSetting> findAll(Connection conn) throws SQLException {
+        String sql = "SELECT IDSettings, SettingName, SettingVal, Descrition, Category, MFF " +
+                     "FROM Settings ORDER BY IDSettings";
+        List<AppSetting> list = new ArrayList<>();
+        try (PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                list.add(new AppSetting(
+                        rs.getInt("IDSettings"),
+                        rs.getString("SettingName"),
+                        rs.getString("SettingVal"),
+                        rs.getString("Descrition"),
+                        rs.getString("Category"),
+                        rs.getString("MFF")));
+            }
+        }
+        return list;
+    }
+
+    /** Unosi novi red u Settings (IDSettings je autonumber). */
+    public void insert(Connection conn, AppSetting s) throws SQLException {
+        String sql = "INSERT INTO Settings (SettingName, SettingVal, Descrition, Category, MFF) VALUES (?, ?, ?, ?, ?)";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            bindFields(ps, s);
+            ps.executeUpdate();
+        }
+    }
+
+    /** Menja postojeći red u Settings po IDSettings. */
+    public void update(Connection conn, AppSetting s) throws SQLException {
+        String sql = "UPDATE Settings SET SettingName = ?, SettingVal = ?, Descrition = ?, Category = ?, MFF = ? " +
+                     "WHERE IDSettings = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            bindFields(ps, s);
+            ps.setInt(6, s.getIdSettings());
+            ps.executeUpdate();
+        }
+    }
+
+    private void bindFields(PreparedStatement ps, AppSetting s) throws SQLException {
+        ps.setString(1, s.getSettingName());
+        ps.setString(2, s.getSettingVal());
+        ps.setString(3, s.getDescription());
+        ps.setString(4, s.getCategory());
+        ps.setString(5, s.getMff());
     }
 
     /**

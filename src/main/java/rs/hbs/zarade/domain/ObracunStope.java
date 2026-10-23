@@ -6,7 +6,7 @@ import java.math.BigDecimal;
  * Poreske stope i stope doprinosa.
  *
  * Mapira se na tabelu: Obracun_Stope (19 kolona)
- * Baza: data_zarade.mdb (Main DB) ili obracun-honorara.mdb (Calc DB)
+ * Baza: data_zarade.mdb (Main DB)
  *
  * Ova tabela sadrzi sve stope potrebne za obracun:
  * - Stopa poreza

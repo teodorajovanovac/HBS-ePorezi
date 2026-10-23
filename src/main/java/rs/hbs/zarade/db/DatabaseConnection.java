@@ -12,10 +12,7 @@ import java.util.List;
  * Upravlja JDBC konekcijama ka Access bazama.
  *
  * Koristi UCanAccess JDBC driver za pristup .mdb/.accdb fajlovima.
- * Prema CLAUDE.md, postoje tri baze koje se koriste:
- * - common (aj_fn_cmn.mdb)
- * - main (data_zarade.mdb)
- * - calc (obracun-honorara.mdb)
+ * Aplikacija koristi jednu bazu: data_zarade.mdb.
  */
 public class DatabaseConnection {
 
@@ -50,18 +47,6 @@ public class DatabaseConnection {
     }
 
     /**
-     * Kreira konekciju ka common bazi (aj_fn_cmn.mdb).
-     *
-     * @return JDBC Connection
-     * @throws SQLException ako konekcija ne moze da se uspostavi ili baza nije konfigurisana
-     */
-    public Connection getCommonConnection() throws SQLException {
-        String url = config.getCommonJdbcUrl();
-        if (url == null) throw new SQLException("Common baza nije konfigurisana (db.common.path nije postavljen u app.local.properties).");
-        return createConnection(url);
-    }
-
-    /**
      * Kreira konekciju ka glavnoj bazi (data_zarade.mdb).
      *
      * @return JDBC Connection
@@ -69,18 +54,6 @@ public class DatabaseConnection {
      */
     public Connection getMainConnection() throws SQLException {
         return createConnection(config.getMainJdbcUrl());
-    }
-
-    /**
-     * Kreira konekciju ka bazi obracuna (obracun-honorara.mdb).
-     *
-     * @return JDBC Connection
-     * @throws SQLException ako konekcija ne moze da se uspostavi ili baza nije konfigurisana
-     */
-    public Connection getCalcConnection() throws SQLException {
-        String url = config.getCalcJdbcUrl();
-        if (url == null) throw new SQLException("Calc baza nije konfigurisana (db.calc.path nije postavljen u app.local.properties).");
-        return createConnection(url);
     }
 
     private Connection createConnection(String jdbcUrl) throws SQLException {

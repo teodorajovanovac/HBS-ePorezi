@@ -659,7 +659,8 @@ public class PdfReporter {
         }
 
         /**
-         * @param definicije mapa ID_Obracun -> definicija obračuna (datum plaćanja, mesec,
+         * @param definicije mapa ID_Obracun -> definicija obračuna (datum plaćanja,
+         *                   mesec,
          *                   naziv za naslov Potvrda_002); može biti null
          */
         public static void generatePotvrdeObracuna(File outputFile,
@@ -718,26 +719,17 @@ public class PdfReporter {
                 if (v2) {
                         // Prvi naslov: srpski i engleski, u dva reda, manjim fontom
                         doc.add(new Paragraph("Potvrda o obračunatom porezu i doprinosima na druge prihode")
-                                        .setFontSize(10).setBold()
+                                        .setFontSize(12).setBold()
                                         .setTextAlignment(TextAlignment.CENTER).setMarginBottom(0));
                         doc.add(new Paragraph("Certificate of Tax and Contributions Withholding on Other Income")
-                                        .setFontSize(10).setBold()
+                                        .setFontSize(12).setBold()
                                         .setTextAlignment(TextAlignment.CENTER).setMarginBottom(14));
 
-                        // Drugi naslov: Datum plaćanja | Mesec (YYYYMM) /Naslov obračuna
-                        String datum = def != null && def.getDatumObracuna() != null
-                                        ? def.getDatumObracuna().format(DATE_FMT)
-                                        : "";
-                        String mesec = def != null ? nvl(def.getMesec()).replace("-", "") : "";
-                        String naslovObracuna = def != null ? nvl(def.getNazivObracuna()) : "";
-                        doc.add(new Paragraph("Datum plaćanja: " + datum + " | Mesec: " + mesec + " /"
-                                        + naslovObracuna).setFontSize(12).setBold()
-                                        .setTextAlignment(TextAlignment.CENTER).setMarginBottom(36));
-                } else {
-                        // Naslov
-                        doc.add(new Paragraph(nazivPrihoda).setFontSize(12).setBold()
-                                        .setTextAlignment(TextAlignment.CENTER).setMarginBottom(36));
                 }
+
+                // Naslov (Potvrda_001), odnosno drugi naslov (Potvrda_002): naziv prihoda
+                doc.add(new Paragraph(nazivPrihoda).setFontSize(12).setBold()
+                                .setTextAlignment(TextAlignment.CENTER).setMarginBottom(36));
 
                 // Primalac prihoda / Poslodavac
                 String adresa = primalac != null ? nvl(primalac.getAdresaP()) : "";
@@ -800,7 +792,7 @@ public class PdfReporter {
                         Table dh = new Table(UnitValue.createPercentArray(w4))
                                         .setWidth(UnitValue.createPercentValue(100))
                                         .setBorder(box);
-                        dh.addCell(potvrdaCell(bi(v2, "Doprinosi na teret zaposlenog", "Employee contributions"),
+                        dh.addCell(potvrdaCell(bi(v2, "Doprinosi ", "Contributions"),
                                         TextAlignment.LEFT, true, box, 0));
                         dh.addCell(potvrdaCell(bi(v2, "Osnovica", "Base"), TextAlignment.RIGHT, false, box, 0));
                         dh.addCell(potvrdaCell(v2 ? "%" : "Procenat", TextAlignment.RIGHT, false, box, 0));
@@ -814,8 +806,8 @@ public class PdfReporter {
                         addPotvrdaRed(d, bi(v2, "Zdravstveno osiguranje",
                                         "Health insurance"), o.getOsnovicaDoprinosi(), o.getzZdr(), false);
                         // Linija iznad ukupnog reda (isto kao ispred "Ukupno" u tabeli Vrsta obračuna)
-                        d.addCell(potvrdaCell(bi(v2, "Ukupno doprinosi na teret zaposlenog",
-                                        "Total employee contributions"), TextAlignment.LEFT, true, none,
+                        d.addCell(potvrdaCell(bi(v2, "Ukupno doprinosi ",
+                                        "Total contributions"), TextAlignment.LEFT, true, none,
                                         0).setBorderTop(hair));
                         d.addCell(potvrdaCell("", TextAlignment.RIGHT, false, none, 0).setBorderTop(hair));
                         d.addCell(potvrdaCell("", TextAlignment.RIGHT, false, none, 0).setBorderTop(hair));
@@ -846,8 +838,8 @@ public class PdfReporter {
                 Table uk = new Table(UnitValue.createPercentArray(new float[] { 7, 2 }))
                                 .setWidth(UnitValue.createPercentValue(100)).setBorder(box).setMarginBottom(24);
                 uk.addCell(potvrdaCell(
-                                v2 ? "Ukupno troškovi na teret zaposlenog (doprinosi + porez) /Total costs borne by the employee (contributions + tax)"
-                                                : "Ukupno troškovi na teret zaposlenog (doprinosi + porez)",
+                                v2 ? "Ukupno troškovi obračuna doprinosa i poreza /Total costs of calculation of contributions and taxes"
+                                                : "Ukupno troškovi obračuna doprinosa i poreza",
                                 TextAlignment.LEFT, true, box, 0));
                 uk.addCell(potvrdaCell(fmtDin(zPio.add(zZdr).add(porez)), TextAlignment.RIGHT, true, box, 0));
                 doc.add(uk);
