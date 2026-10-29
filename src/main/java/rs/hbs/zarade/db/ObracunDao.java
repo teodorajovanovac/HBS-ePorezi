@@ -72,6 +72,15 @@ public class ObracunDao implements BaseDao<Obracun, Integer> {
         "     [SVP-2]=?, [SVP-3]=?, SVP=?, [SVP-1]=?, [SVP-4]=?, [SVP-5]=?" +
         " WHERE IDpobracun=?";
 
+    /**
+     * Access čuva vreme bez delova sekunde, a UCanAccess u memoriji drži punu preciznost.
+     * Kad se razlikuju, UCanAccess ne nađe red u .mdb fajlu i naredni UPDATE te stavke
+     * se tiho ne zapiše (vidi se do izlaska iz programa, posle je bruto 0).
+     */
+    private static Timestamp toAccessTimestamp(java.time.LocalDateTime value) {
+        return value != null ? Timestamp.valueOf(value.withNano(0)) : null;
+    }
+
     private static final String DELETE_SQL = "DELETE FROM " + TABLE_NAME + " WHERE IDpobracun=?";
 
     @Override
@@ -101,8 +110,7 @@ public class ObracunDao implements BaseDao<Obracun, Integer> {
                 stmt.setNull(17, java.sql.Types.DOUBLE);
             }
             stmt.setBigDecimal(18, entity.getProcenat());
-            stmt.setTimestamp(19, entity.getObracunato() != null ?
-                    Timestamp.valueOf(entity.getObracunato()) : null);
+            stmt.setTimestamp(19, toAccessTimestamp(entity.getObracunato()));
             stmt.executeUpdate();
 
             try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
@@ -136,8 +144,7 @@ public class ObracunDao implements BaseDao<Obracun, Integer> {
             stmt.setBigDecimal(16, entity.getzNez());
             stmt.setBigDecimal(17, entity.getMfp());
             stmt.setBigDecimal(18, entity.getNeto());
-            stmt.setTimestamp(19, entity.getObracunato() != null ?
-                    Timestamp.valueOf(entity.getObracunato()) : null);
+            stmt.setTimestamp(19, toAccessTimestamp(entity.getObracunato()));
             setIntOrNull(stmt, 20, entity.getLnkZap());
             stmt.setString(21, entity.getPrezime());
             stmt.setString(22, entity.getIme());

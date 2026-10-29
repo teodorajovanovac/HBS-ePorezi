@@ -416,10 +416,21 @@ public class ObracuniScreen {
                 "-fx-background-color: #1A7F37; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-cursor: hand;"));
         autoObradaBtn.setOnAction(e -> runAutomatskaObrada());
 
-        // Taster je skriven; Shift+Ctrl+Insert ga prikazuje/sakriva (važi dok je ovaj
+        Button izvestajPojedinacniBtn = new Button("Izveštaj obračun");
+        izvestajPojedinacniBtn.setStyle(
+                "-fx-background-color: white; -fx-text-fill: #1F2328; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-cursor: hand;");
+        izvestajPojedinacniBtn.setOnMouseEntered(e -> izvestajPojedinacniBtn.setStyle(
+                "-fx-background-color: #EEF2F7; -fx-text-fill: #1F2328; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-border-color: #B3BEC8; -fx-border-width: 1; -fx-border-radius: 6; -fx-cursor: hand;"));
+        izvestajPojedinacniBtn.setOnMouseExited(e -> izvestajPojedinacniBtn.setStyle(
+                "-fx-background-color: white; -fx-text-fill: #1F2328; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-cursor: hand;"));
+        izvestajPojedinacniBtn.setOnAction(e -> generateIzvestaj("zbirni"));
+
+        // Tasteri su skriveni; Shift+Ctrl+Insert ih prikazuje/sakriva (važi dok je ovaj
         // ekran u sceni)
         autoObradaBtn.setVisible(false);
         autoObradaBtn.setManaged(false);
+        izvestajPojedinacniBtn.setVisible(false);
+        izvestajPojedinacniBtn.setManaged(false);
         javafx.scene.input.KeyCombination toggleCombo = new javafx.scene.input.KeyCodeCombination(
                 javafx.scene.input.KeyCode.INSERT,
                 javafx.scene.input.KeyCombination.SHIFT_DOWN,
@@ -429,6 +440,8 @@ public class ObracuniScreen {
                 boolean show = !autoObradaBtn.isVisible();
                 autoObradaBtn.setVisible(show);
                 autoObradaBtn.setManaged(show);
+                izvestajPojedinacniBtn.setVisible(show);
+                izvestajPojedinacniBtn.setManaged(show);
                 ev.consume();
             }
         };
@@ -446,15 +459,6 @@ public class ObracuniScreen {
         // Izveštaj 1 - zakomentarisano
         // Button izvestaj1Btn = new Button("Izveštaj 1");
         // izvestaj1Btn.setOnAction(e -> generateIzvestaj("zbirni"));
-
-        Button izvestajPojedinacniBtn = new Button("Izveštaj obračun");
-        izvestajPojedinacniBtn.setStyle(
-                "-fx-background-color: white; -fx-text-fill: #1F2328; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-cursor: hand;");
-        izvestajPojedinacniBtn.setOnMouseEntered(e -> izvestajPojedinacniBtn.setStyle(
-                "-fx-background-color: #EEF2F7; -fx-text-fill: #1F2328; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-border-color: #B3BEC8; -fx-border-width: 1; -fx-border-radius: 6; -fx-cursor: hand;"));
-        izvestajPojedinacniBtn.setOnMouseExited(e -> izvestajPojedinacniBtn.setStyle(
-                "-fx-background-color: white; -fx-text-fill: #1F2328; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-border-color: #D0D7DE; -fx-border-width: 1; -fx-border-radius: 6; -fx-cursor: hand;"));
-        izvestajPojedinacniBtn.setOnAction(e -> generateIzvestaj("zbirni"));
 
         Button potvrdeBtn = new Button("Potvrde obračuna");
         potvrdeBtn.setStyle(
@@ -477,7 +481,7 @@ public class ObracuniScreen {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        Button dodajPrimaocaBtn = new Button("+ Dodaj primaoca");
+        Button dodajPrimaocaBtn = new Button("+ Dodaj primaoca u obračun");
         dodajPrimaocaBtn.setStyle(
                 "-fx-background-color: white; -fx-text-fill: #0969DA; -fx-font-size: 13px; -fx-padding: 8 18; -fx-background-radius: 6; -fx-border-color: #0969DA; -fx-border-width: 1; -fx-border-radius: 6; -fx-cursor: hand;");
         dodajPrimaocaBtn.setOnMouseEntered(e -> dodajPrimaocaBtn.setStyle(

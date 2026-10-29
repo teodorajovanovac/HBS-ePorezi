@@ -739,7 +739,8 @@ public class PdfReporter {
                         jmbg = nvl(primalac.getMb());
 
                 Cell levo = new Cell().setBorder(none)
-                                .add(boldIf(v2, new Paragraph("Primalac prihoda").setFontSize(9).setMarginBottom(8)))
+                                .add(boldIf(v2, new Paragraph("Primalac prihoda /Recipient of the fee").setFontSize(9)
+                                                .setMarginBottom(8)))
                                 .add(new Paragraph((nvl(o.getPrezime()) + " " + nvl(o.getIme())).trim())
                                                 .setFontSize(10).setMarginLeft(14).setMarginBottom(0))
                                 .add(new Paragraph(adresa).setFontSize(10).setMarginLeft(14).setMarginBottom(0))
@@ -749,7 +750,8 @@ public class PdfReporter {
 
                 // Blok "Poslodavac" je pomeren udesno za 2 cm (1 cm = 28,35 pt)
                 Cell desno = new Cell().setBorder(none).setPaddingLeft(2 * 28.35f)
-                                .add(boldIf(v2, new Paragraph("Poslodavac").setFontSize(9).setMarginBottom(8)))
+                                .add(boldIf(v2, new Paragraph("Poslodavac /Employer").setFontSize(9)
+                                                .setMarginBottom(8)))
                                 .add(new Paragraph(poslodavacNaziv).setFontSize(10).setMarginLeft(14)
                                                 .setMarginBottom(4))
                                 .add(new Paragraph(poslodavac != null ? nvl(poslodavac.getUlicaIBroj()) : "")

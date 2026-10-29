@@ -55,6 +55,8 @@ public class ZaglavljeObracunaScreen {
     private TextField mesecField;
     private DatePicker datumObracunaPicker;
     private DatePicker datumSlanjaPicker;
+    private Label datumObracunaRowLabel;
+    private Label datumObracunaErrorLabel;
     private ComboBox<String> oznakaKonacnaCombo;
     private TextField brojDanaField;
     private TextField brojSatiField;
@@ -226,7 +228,7 @@ public class ZaglavljeObracunaScreen {
                 createFieldRow("Naziv obračuna: *", nazivField),
                 createFieldRow("Tip isplate: *", tipIsplateCombo),
                 createFieldRow("Datum slanja ePPP-PD: *", datumSlanjaPicker),
-                createFieldRow("Datum obračuna /plaćanja: *", datumObracunaPicker),
+                createDatumObracunaRow(),
                 createFieldRow("Mesec YYYY-MM: *", mesecField),
                 createFieldRow("Oznaka:", oznakaKonacnaCombo),
                 new Separator(),
@@ -247,6 +249,10 @@ public class ZaglavljeObracunaScreen {
                 mesecField.setText(n.format(MESEC_FMT));
             }
         });
+
+        // Datum obračuna/plaćanja ne sme biti pre datuma slanja: greška se prikazuje odmah
+        datumObracunaPicker.valueProperty().addListener((obs, o, n) -> validateDatumi());
+        datumSlanjaPicker.valueProperty().addListener((obs, o, n) -> validateDatumi());
 
         // Dirty tracking
         nazivField.textProperty().addListener((obs, o, n) -> markDirty());
@@ -280,6 +286,40 @@ public class ZaglavljeObracunaScreen {
 
         row.getChildren().addAll(label, field);
         return row;
+    }
+
+    /** Red za datum obračuna sa porukom o grešci ispod kontrole (kao kod JMBG). */
+    private HBox createDatumObracunaRow() {
+        datumObracunaErrorLabel = new Label();
+        datumObracunaErrorLabel.setFont(Font.font("Segoe UI", 11));
+        datumObracunaErrorLabel.setTextFill(Color.web("#CF222E"));
+        datumObracunaErrorLabel.setWrapText(true);
+        datumObracunaErrorLabel.setVisible(false);
+        datumObracunaErrorLabel.setManaged(false);
+        VBox box = new VBox(4, datumObracunaPicker, datumObracunaErrorLabel);
+        HBox row = createFieldRow("Datum obračuna /plaćanja: *", box);
+        datumObracunaRowLabel = (Label) row.getChildren().get(0);
+        return row;
+    }
+
+    /** @return true ako je datum obračuna/plaćanja >= datum slanja (ili neki nije unet) */
+    private boolean validateDatumi() {
+        LocalDate obracun = datumObracunaPicker.getValue();
+        LocalDate slanje = datumSlanjaPicker.getValue();
+        boolean ok = obracun == null || slanje == null || !obracun.isBefore(slanje);
+        if (ok) {
+            datumObracunaRowLabel.setStyle("-fx-text-fill: #0969DA;");
+            datumObracunaPicker.setStyle("");
+            datumObracunaErrorLabel.setText("");
+        } else {
+            datumObracunaRowLabel.setStyle("-fx-text-fill: #CF222E;");
+            datumObracunaPicker.setStyle("-fx-border-color: #CF222E; -fx-border-width: 1.5; -fx-border-radius: 4;");
+            datumObracunaErrorLabel.setText("✗ Datum obračuna/plaćanja ne može biti pre datuma slanja ePPP-PD ("
+                    + datumSlanjaPicker.getEditor().getText() + ")");
+        }
+        datumObracunaErrorLabel.setVisible(!ok);
+        datumObracunaErrorLabel.setManaged(!ok);
+        return ok;
     }
 
     private HBox createFooter() {
@@ -483,6 +523,11 @@ public class ZaglavljeObracunaScreen {
 
         if (errors.length() > 0) {
             showError("Validacija", "Popunite obavezna polja:\n\n" + errors.toString());
+            return;
+        }
+        if (!validateDatumi()) {
+            showError("Validacija", datumObracunaErrorLabel.getText().substring(2) + ".");
+            datumObracunaPicker.requestFocus();
             return;
         }
 

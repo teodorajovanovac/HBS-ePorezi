@@ -38,6 +38,12 @@ public class HbsZaradeApp extends Application {
 
     @Override
     public void start(Stage stage) {
+        // DatePicker uzima prvi dan nedelje iz FORMAT locale-a; "fw-mon" postavlja ponedeljak,
+        // a ostalo formatiranje ostaje kao u sistemu
+        java.util.Locale fmt = java.util.Locale.getDefault(java.util.Locale.Category.FORMAT);
+        java.util.Locale.setDefault(java.util.Locale.Category.FORMAT,
+                new java.util.Locale.Builder().setLocale(fmt).setUnicodeLocaleKeyword("fw", "mon").build());
+
         primaryStage = stage;
         primaryStage.setTitle("ePorezi");
         primaryStage.setMinWidth(1024);

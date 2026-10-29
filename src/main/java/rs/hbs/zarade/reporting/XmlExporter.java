@@ -90,6 +90,9 @@ public class XmlExporter {
         tag(sb, "KlijentskaOznakaDeklaracije", "");
         tag(sb, "VrstaPrijave", "1"); // 1 = originalna
         tag(sb, "ObracunskiPeriod", nvl(def.getMesec()));
+        if (def.isKonacna()) {
+            tag(sb, "OznakaZaKonacnu", "K");
+        }
         tag(sb, "DatumPlacanja", def.getDatumObracuna() != null ? def.getDatumObracuna().format(DATE_FMT) : "");
         tag(sb, "NajnizaOsnovica", "0");
         sb.append("</tns:PodaciOPrijavi>\n");
